@@ -5,15 +5,35 @@ mod room;
 
 use room::Room;
 use std::collections::HashMap;
+use std::error::Error;
+use std::fmt::{Display, Formatter};
 
 pub struct Home {
     name: String,
     rooms: HashMap<String, Room>,
 }
 
+#[derive(Debug)]
 pub struct HomeReadResult {}
 
+impl Display for HomeReadResult {
+    fn fmt(&self, _f: &mut Formatter<'_>) -> std::fmt::Result {
+        todo!()
+    }
+}
+
+impl Error for HomeReadResult {}
+
+#[derive(Debug)]
 pub struct HomeUpdateResult {}
+
+impl Display for HomeUpdateResult {
+    fn fmt(&self, _f: &mut Formatter<'_>) -> std::fmt::Result {
+        todo!()
+    }
+}
+
+impl Error for HomeUpdateResult {}
 
 impl Home {
     pub fn add_room(&mut self, _name: String) -> HomeUpdateResult {

@@ -1,27 +1,32 @@
-use std::fmt::Error;
+use std::error::Error;
+use std::fmt::{Display, Formatter};
 
 mod power_socket;
 mod thermometer;
 
-enum DeviceCondition {
-    Ok,
-    Err(Error),
+pub enum DeviceCondition {
+    Ok(String),
+    Err(Box<dyn Error>),
     Unknown,
 }
 
-pub struct DeviceStatus {
-    condition: DeviceCondition,
-    status: String,
-}
-
-impl DeviceStatus {
+impl DeviceCondition {
     pub fn as_string(&self) -> &str {
         todo!()
     }
 }
 
 pub trait Device {
-    fn get_status(&self) -> Result<DeviceStatus, Error>;
+    fn get_status(&self) -> DeviceCondition;
 }
 
+#[derive(Debug)]
 struct DeviceUpdateResult {}
+
+impl Display for DeviceUpdateResult {
+    fn fmt(&self, _f: &mut Formatter<'_>) -> std::fmt::Result {
+        todo!()
+    }
+}
+
+impl Error for DeviceUpdateResult {}

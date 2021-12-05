@@ -1,10 +1,29 @@
 use crate::devices::Device;
 use std::collections::HashMap;
-use std::fmt::Error;
+use std::error::Error;
+use std::fmt::{Display, Formatter};
 
+#[derive(Debug)]
 pub struct RoomReadResult {}
 
+impl Display for RoomReadResult {
+    fn fmt(&self, _f: &mut Formatter<'_>) -> std::fmt::Result {
+        todo!()
+    }
+}
+
+impl Error for RoomReadResult {}
+
+#[derive(Debug)]
 pub struct RoomUpdateResult {}
+
+impl Display for RoomUpdateResult {
+    fn fmt(&self, _f: &mut Formatter<'_>) -> std::fmt::Result {
+        todo!()
+    }
+}
+
+impl Error for RoomUpdateResult {}
 
 pub struct Room {
     name: String,
@@ -21,7 +40,7 @@ impl Room {
     pub fn list_devices(&self) -> Vec<Box<dyn Device>> {
         todo!()
     }
-    pub fn get_device(&self, _name: &str) -> Result<Box<dyn Device>, Error> {
+    pub fn get_device(&self, _name: &str) -> Result<Box<dyn Device>, RoomReadResult> {
         todo!()
     }
     pub fn get_summary(&self) -> String {
