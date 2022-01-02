@@ -1,4 +1,5 @@
-use crate::devices::{Device, DeviceCondition};
+use crate::devices::{Device, DeviceStatus};
+use std::error::Error;
 
 struct Thermometer {
     name: String,
@@ -13,7 +14,7 @@ impl Thermometer {
 }
 
 impl Device for Thermometer {
-    fn get_status(&self) -> DeviceCondition {
+    fn get_status(&self) -> Result<DeviceStatus, Box<dyn Error>> {
         todo!()
     }
 }

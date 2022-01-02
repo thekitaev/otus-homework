@@ -1,4 +1,5 @@
-use crate::devices::{Device, DeviceCondition, DeviceUpdateResult};
+use crate::devices::{Device, DeviceStatus, DeviceUpdateResult};
+use std::error::Error;
 
 struct PowerSocket {
     name: String,
@@ -20,7 +21,7 @@ impl PowerSocket {
 }
 
 impl Device for PowerSocket {
-    fn get_status(&self) -> DeviceCondition {
+    fn get_status(&self) -> Result<DeviceStatus, Box<dyn Error>> {
         todo!()
     }
 }

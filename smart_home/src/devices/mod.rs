@@ -4,20 +4,25 @@ use std::fmt::{Display, Formatter};
 mod power_socket;
 mod thermometer;
 
-pub enum DeviceCondition {
-    Ok(String),
+enum DeviceCondition {
+    Ok,
     Err(Box<dyn Error>),
     Unknown,
 }
 
-impl DeviceCondition {
+pub struct DeviceStatus {
+    condition: DeviceCondition,
+    status: String,
+}
+
+impl DeviceStatus {
     pub fn as_string(&self) -> &str {
         todo!()
     }
 }
 
 pub trait Device {
-    fn get_status(&self) -> DeviceCondition;
+    fn get_status(&self) -> Result<DeviceStatus, Box<dyn Error>>;
 }
 
 #[derive(Debug)]
