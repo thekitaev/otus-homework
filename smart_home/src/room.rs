@@ -45,7 +45,10 @@ impl Room {
         let mut err = None;
 
         if self.devices.contains_key(name) {
-            err = Some(string_error::into_err(format!("room already contains device '{}'", name)));
+            err = Some(string_error::into_err(format!(
+                "room already contains device '{}'",
+                name
+            )));
         } else {
             self.devices.insert(name.to_string(), device);
         }
@@ -56,7 +59,10 @@ impl Room {
         let mut err = None;
 
         if !self.devices.contains_key(name) {
-            err = Some(string_error::into_err(format!("room does not contain device '{}'", name)))
+            err = Some(string_error::into_err(format!(
+                "room does not contain device '{}'",
+                name
+            )))
         } else {
             self.devices.remove(name);
         }
@@ -64,17 +70,26 @@ impl Room {
     }
 
     pub fn list_devices(&self) -> Vec<&dyn Device> {
-        let mut out = vec![];
+        let mut devices = vec![];
 
-        for device in self.devices.values() {
-            out.push(device.as_ref())
+        for d in self.devices.values() {
+            devices.push(d.as_ref())
         }
 
-        out
+        devices
     }
 
-    pub fn get_device(&self, _name: &str) -> Result<Box<dyn Device>, RoomReadResult> {
-        todo!()
+    pub fn get_device(&self, name: &str) -> Result<&dyn Device, RoomReadResult> {
+        if self.devices.contains_key(name) {
+            let device = self.devices.get(name).unwrap();
+            Ok(device.as_ref())
+        } else {
+            let err = Some(string_error::into_err(format!(
+                "device '{}' does not exist",
+                name
+            )));
+            Err(RoomReadResult { err })
+        }
     }
 
     pub fn get_summary(&self) -> String {
@@ -83,13 +98,10 @@ impl Room {
         for device in self.devices.values() {
             let status = device.get_status();
             match status {
-                Ok(s) => {
-                    out.push_str(s.as_string())
-                },
-                Err(err) => {
-                    out.push_str(format!("error getting status: {}", err).as_str())
-                },
+                Ok(s) => out.push_str(s.as_string()),
+                Err(err) => out.push_str(format!("error getting status: {}", err).as_str()),
             }
+            out.push('\n')
         }
 
         out

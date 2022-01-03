@@ -4,8 +4,10 @@ use std::error::Error;
 struct PowerSocket {
     name: String,
     description: String,
+    dsn: String,
     power: f64,
     is_on: bool,
+    last_updated: Option<std::time::Instant>,
 }
 
 impl PowerSocket {

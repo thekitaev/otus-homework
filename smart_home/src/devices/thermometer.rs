@@ -4,7 +4,9 @@ use std::error::Error;
 struct Thermometer {
     name: String,
     description: String,
+    dsn: String,
     temp: f64,
+    last_updated: Option<std::time::Instant>,
 }
 
 impl Thermometer {

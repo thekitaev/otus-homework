@@ -58,7 +58,10 @@ impl Home {
     pub fn add_room(&mut self, name: &str) -> HomeUpdateResult {
         let mut err = None;
         if self.rooms.contains_key(name) {
-            err = Some(string_error::into_err(format!("home already contains room '{}'", name)));
+            err = Some(string_error::into_err(format!(
+                "home already contains room '{}'",
+                name
+            )));
         } else {
             self.rooms.insert(name.to_string(), Room::new(name));
         }
@@ -68,7 +71,10 @@ impl Home {
     pub fn remove_room(&mut self, name: &str) -> HomeUpdateResult {
         let mut err = None;
         if !self.rooms.contains_key(name) {
-            err = Some(string_error::into_err(format!("home does not contain room '{}'", name)));
+            err = Some(string_error::into_err(format!(
+                "home does not contain room '{}'",
+                name
+            )));
         } else {
             self.rooms.remove(name);
         }
