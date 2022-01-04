@@ -1,0 +1,10 @@
+[package]
+name = "power_socket_server"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+s_home_proto = { path = "../s_home_proto" }
+rand = "0.8.4"

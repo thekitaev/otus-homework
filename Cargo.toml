@@ -1,4 +1,4 @@
 [workspace]
 
-members = ["smart_home", "power_socket_server", "thermometer_server"]
+members = ["smart_home", "power_socket_server", "thermometer_server", "s_home_proto"]
 
