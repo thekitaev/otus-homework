@@ -1,7 +1,7 @@
+use crate::room::Room;
 use std::collections::HashMap;
 use std::error::Error;
 use std::fmt::{Display, Formatter};
-use crate::room::Room;
 
 pub struct Home {
     name: String,

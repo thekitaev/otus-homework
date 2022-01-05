@@ -1,11 +1,18 @@
-use serde::{Serialize, Deserialize};
-use serde_json::{to_string, from_str};
+use serde::{Deserialize, Serialize};
+use serde_json::{from_str, to_string};
 
 pub trait Marshal {
-    fn marshal(&self) -> String where Self: Serialize {
+    fn marshal(&self) -> String
+    where
+        Self: Serialize,
+    {
         to_string(&self).unwrap()
     }
-    fn unmarshal<'a>(s: &'a str) -> serde_json::Result<Self> where Self: Sized, Self: Deserialize<'a> {
+    fn unmarshal<'a>(s: &'a str) -> serde_json::Result<Self>
+    where
+        Self: Sized,
+        Self: Deserialize<'a>,
+    {
         from_str(s)
     }
 }
@@ -26,7 +33,10 @@ pub enum HomeAction {
 pub enum HomeRequest {
     Ping,
     Status,
-    HomeAction { method: HomeAction, room_name: String },
+    HomeAction {
+        method: HomeAction,
+        room_name: String,
+    },
 }
 
 impl Marshal for HomeRequest {}
