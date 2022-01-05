@@ -1,8 +1,9 @@
+use rand::Rng;
+use s_home_proto::{DeviceAction, DeviceRequest, Marshal, Response};
 use std::io::{Read, Write};
 use std::net::TcpListener;
-use std::thread;
-use rand::Rng;
-use s_home_proto::{DeviceRequest, Marshal, Response, DeviceAction};
+use std::thread::{sleep, spawn};
+use std::time::Duration;
 
 struct State {
     is_on: bool,
@@ -10,15 +11,19 @@ struct State {
 }
 
 fn main() {
-    let mut state = State { is_on: false, power: 0.0 };
+    let mut state = State {
+        is_on: false,
+        power: 0.0,
+    };
 
     let listener = TcpListener::bind("127.0.0.1:1234").unwrap();
 
-    thread::spawn(move ||{
+    spawn(move || {
         let mut rng = rand::thread_rng();
 
         loop {
-            state.power = rng.gen::<f32>();
+            state.power = rng.gen_range(10.0..20.0);
+            sleep(Duration::from_secs(1))
         }
     });
 
@@ -35,13 +40,17 @@ fn main() {
                     true => ("on", state.power),
                     false => ("off", 0.0),
                 };
-                Response::Status(format!("status: {}, power: {}", status, power))
+                Response::Status(format!("status: {}, power: {:.1}", status, power))
             }
-            DeviceRequest::DeviceAction { method: DeviceAction::TurnOn } => {
+            DeviceRequest::DeviceAction {
+                method: DeviceAction::TurnOn,
+            } => {
                 state.is_on = true;
                 Response::Ok
             }
-            DeviceRequest::DeviceAction { method: DeviceAction::TurnOff } => {
+            DeviceRequest::DeviceAction {
+                method: DeviceAction::TurnOff,
+            } => {
                 state.is_on = false;
                 Response::Ok
             }
