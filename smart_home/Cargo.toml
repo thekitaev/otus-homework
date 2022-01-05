@@ -7,3 +7,4 @@ edition = "2021"
 
 [dependencies]
 string-error = "0.1.0"
+#derive-getters = "0.2.0"

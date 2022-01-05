@@ -10,14 +10,24 @@ enum DeviceCondition {
     Unknown,
 }
 
+impl Display for DeviceCondition {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Ok => write!(f, "OK"),
+            Self::Err(err) => write!(f, "ERROR: {}", err.to_string()),
+            Self::Unknown => write!(f, "UNKNOWN"),
+        }
+    }
+}
+
 pub struct DeviceStatus {
     condition: DeviceCondition,
     status: String,
 }
 
 impl DeviceStatus {
-    pub fn as_string(&self) -> &str {
-        todo!()
+    pub fn as_string(&self) -> String {
+        format!("condition: {}, status: {}", self.condition, self.status)
     }
 }
 
@@ -26,11 +36,16 @@ pub trait Device {
 }
 
 #[derive(Debug)]
-struct DeviceUpdateResult {}
+struct DeviceUpdateResult {
+    err: Option<Box<dyn Error>>,
+}
 
 impl Display for DeviceUpdateResult {
-    fn fmt(&self, _f: &mut Formatter<'_>) -> std::fmt::Result {
-        todo!()
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        match &self.err {
+            Some(err) => write!(f, "{}", err.to_string()),
+            None => write!(f, "OK"),
+        }
     }
 }
 

@@ -51,28 +51,41 @@ impl Error for HomeUpdateResult {}
 
 impl Home {
     pub fn add_room(&mut self, name: &str) -> HomeUpdateResult {
-        let mut err = None;
-        if self.rooms.contains_key(name) {
-            err = Some(string_error::into_err(format!(
+        let err = if self.rooms.contains_key(name) {
+            Some(string_error::into_err(format!(
                 "home already contains room '{}'",
                 name
-            )));
+            )))
         } else {
             self.rooms.insert(name.to_string(), Room::new(name));
-        }
+            None
+        };
         HomeUpdateResult { err }
     }
 
+    pub fn get_room(&mut self, name: &str) -> Result<&Room, HomeReadResult> {
+        if self.rooms.contains_key(name) {
+            Ok(self.rooms.get(name).unwrap())
+        } else {
+            Err(HomeReadResult {
+                err: Some(string_error::into_err(format!(
+                    "home does not contain room '{}'",
+                    name
+                ))),
+            })
+        }
+    }
+
     pub fn remove_room(&mut self, name: &str) -> HomeUpdateResult {
-        let mut err = None;
-        if !self.rooms.contains_key(name) {
-            err = Some(string_error::into_err(format!(
+        let err = if !self.rooms.contains_key(name) {
+            Some(string_error::into_err(format!(
                 "home does not contain room '{}'",
                 name
-            )));
+            )))
         } else {
             self.rooms.remove(name);
-        }
+            None
+        };
         HomeUpdateResult { err }
     }
 
@@ -99,6 +112,11 @@ impl Home {
 mod tests {
     #[test]
     fn test_add_room() {
+        todo!()
+    }
+
+    #[test]
+    fn test_get_room() {
         todo!()
     }
 

@@ -3,3 +3,5 @@
 mod devices;
 mod home;
 mod room;
+
+fn main() {}

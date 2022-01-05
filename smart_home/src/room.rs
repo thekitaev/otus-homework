@@ -9,8 +9,11 @@ pub struct RoomReadResult {
 }
 
 impl Display for RoomReadResult {
-    fn fmt(&self, _f: &mut Formatter<'_>) -> std::fmt::Result {
-        todo!()
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        match &self.err {
+            Some(err) => write!(f, "{}", err.to_string()),
+            None => write!(f, "OK"),
+        }
     }
 }
 
@@ -42,30 +45,28 @@ impl Room {
         }
     }
     pub fn add_device(&mut self, name: &str, device: Box<dyn Device>) -> RoomUpdateResult {
-        let mut err = None;
-
-        if self.devices.contains_key(name) {
-            err = Some(string_error::into_err(format!(
+        let err = if self.devices.contains_key(name) {
+            Some(string_error::into_err(format!(
                 "room already contains device '{}'",
                 name
-            )));
+            )))
         } else {
             self.devices.insert(name.to_string(), device);
-        }
+            None
+        };
         RoomUpdateResult { err }
     }
 
     pub fn remove_device(&mut self, name: &str) -> RoomUpdateResult {
-        let mut err = None;
-
-        if !self.devices.contains_key(name) {
-            err = Some(string_error::into_err(format!(
+        let err = if !self.devices.contains_key(name) {
+            Some(string_error::into_err(format!(
                 "room does not contain device '{}'",
                 name
             )))
         } else {
             self.devices.remove(name);
-        }
+            None
+        };
         RoomUpdateResult { err }
     }
 
@@ -98,7 +99,7 @@ impl Room {
         for device in self.devices.values() {
             let status = device.get_status();
             match status {
-                Ok(s) => out.push_str(s.as_string()),
+                Ok(s) => out.push_str(s.as_string().as_str()),
                 Err(err) => out.push_str(format!("error getting status: {}", err).as_str()),
             }
             out.push('\n')
