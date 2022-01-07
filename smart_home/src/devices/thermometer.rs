@@ -1,7 +1,7 @@
 use crate::devices::{Device, DeviceStatus};
 use std::error::Error;
 
-struct Thermometer {
+pub struct Thermometer {
     name: String,
     description: String,
     dsn: String,
@@ -10,6 +10,15 @@ struct Thermometer {
 }
 
 impl Thermometer {
+    pub(crate) fn new(name: &str) -> Self {
+        Self {
+            name: name.to_string(),
+            description: "".to_string(),
+            dsn: "127.0.0.1:12345".to_string(),
+            temp: 0.0,
+            last_updated: None,
+        }
+    }
     fn get_temp(&self) -> f64 {
         todo!()
     }

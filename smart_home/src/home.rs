@@ -1,3 +1,4 @@
+use crate::quick_display_and_error;
 use crate::room::Room;
 use std::collections::HashMap;
 use std::error::Error;
@@ -22,32 +23,13 @@ pub struct HomeReadResult {
     err: Option<Box<dyn Error>>,
 }
 
-impl Display for HomeReadResult {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        match &self.err {
-            Some(err) => write!(f, "read failed: {}", err),
-            None => Ok(()),
-        }
-    }
-}
-
-impl Error for HomeReadResult {}
+quick_display_and_error!(HomeReadResult);
 
 #[derive(Debug)]
 pub struct HomeUpdateResult {
     err: Option<Box<dyn Error>>,
 }
-
-impl Display for HomeUpdateResult {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        match &self.err {
-            Some(err) => write!(f, "update failed: {}", err),
-            None => Ok(()),
-        }
-    }
-}
-
-impl Error for HomeUpdateResult {}
+quick_display_and_error!(HomeUpdateResult);
 
 impl Home {
     pub fn add_room(&mut self, name: &str) -> HomeUpdateResult {
@@ -110,24 +92,69 @@ impl Home {
 
 #[cfg(test)]
 mod tests {
+    use crate::home::Home;
+
+    static KITCHEN: &str = "kitchen";
+
+    fn new_home() -> Home {
+        Home::new("test home")
+    }
+
     #[test]
     fn test_add_room() {
-        todo!()
+        let mut home = new_home();
+
+        let add_room_ok = home.add_room(KITCHEN);
+        match add_room_ok.err {
+            Some(err) => panic!("err {} should not be present", err),
+            _ => {}
+        }
+
+        let add_room_err = home.add_room(KITCHEN);
+        match add_room_err.err {
+            Some(_err) => {}
+            None => panic!("err should be present now, but it does not"),
+        }
     }
 
     #[test]
     fn test_get_room() {
-        todo!()
+        let mut home = new_home();
+        home.add_room(KITCHEN);
+
+        let get_kitchen_ok = home.get_room(KITCHEN);
+        match get_kitchen_ok {
+            Ok(res) => {
+                if res.name != KITCHEN {
+                    panic!("get_room: result_name {} wrong", res.name)
+                }
+            }
+            Err(err) => panic!("get_room test failed: err getting room: {}", err),
+        }
     }
 
     #[test]
     fn test_remove_room() {
-        todo!()
+        let mut home = new_home();
+        home.add_room(KITCHEN);
+
+        let remove_kitchen_ok = home.remove_room(KITCHEN);
+        match remove_kitchen_ok.err {
+            Some(err) => panic!("remove_room failed: err {}", err),
+            _ => {}
+        }
     }
 
     #[test]
     fn test_list_rooms() {
-        todo!()
+        let mut home = new_home();
+        let rooms_names = vec!["room_1", "room_2"];
+        for room in rooms_names {
+            home.add_room(room);
+        }
+
+        let rooms = home.list_rooms();
+        assert_eq!(2, rooms.len())
     }
 
     #[test]

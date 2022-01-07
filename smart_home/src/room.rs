@@ -1,4 +1,5 @@
 use crate::devices::Device;
+use crate::quick_display_and_error;
 use std::collections::HashMap;
 use std::error::Error;
 use std::fmt::{Display, Formatter};
@@ -8,32 +9,17 @@ pub struct RoomReadResult {
     err: Option<Box<dyn Error>>,
 }
 
-impl Display for RoomReadResult {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        match &self.err {
-            Some(err) => write!(f, "{}", err.to_string()),
-            None => write!(f, "OK"),
-        }
-    }
-}
-
-impl Error for RoomReadResult {}
+quick_display_and_error!(RoomReadResult);
 
 #[derive(Debug)]
 pub struct RoomUpdateResult {
     err: Option<Box<dyn Error>>,
 }
 
-impl Display for RoomUpdateResult {
-    fn fmt(&self, _f: &mut Formatter<'_>) -> std::fmt::Result {
-        todo!()
-    }
-}
-
-impl Error for RoomUpdateResult {}
+quick_display_and_error!(RoomUpdateResult);
 
 pub struct Room {
-    name: String,
+    pub(crate) name: String,
     devices: HashMap<String, Box<dyn Device>>,
 }
 
@@ -111,9 +97,47 @@ impl Room {
 
 #[cfg(test)]
 mod tests {
+    use crate::devices::power_socket::PowerSocket;
+    use crate::devices::thermometer::Thermometer;
+    use crate::room::Room;
+
+    static POWER_SOCKET: &str = "poser_socket";
+    static THERMOMETER: &str = "thermometer";
+
+    fn new_room() -> Room {
+        Room::new("test room")
+    }
+
+    fn new_power_socket() -> PowerSocket {
+        PowerSocket::new("test socket")
+    }
+
+    fn new_thermometer() -> Thermometer {
+        Thermometer::new("test thermometer")
+    }
+
     #[test]
     fn test_add_device() {
-        todo!()
+        let mut room = new_room();
+
+        // TODO: make a for loop with builder fn and error checking
+        let add_power_socket_ok = room.add_device(POWER_SOCKET, Box::new(new_power_socket()));
+        if let Some(err) = add_power_socket_ok.err {
+            panic!("add_device failed: err {}", err)
+        };
+        let add_power_socket_err = room.add_device(POWER_SOCKET, Box::new(new_power_socket()));
+        if let None = add_power_socket_err.err {
+            panic!("add_device must have an err at this point")
+        };
+
+        let add_thermometer_ok = room.add_device(THERMOMETER, Box::new(new_thermometer()));
+        if let Some(err) = add_thermometer_ok.err {
+            panic!("add_device failed: err {}", err)
+        };
+        let add_thermometer_err = room.add_device(THERMOMETER, Box::new(new_thermometer()));
+        if let None = add_thermometer_err.err {
+            panic!("add_device must have an err at this point")
+        };
     }
 
     #[test]

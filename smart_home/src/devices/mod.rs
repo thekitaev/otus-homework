@@ -1,8 +1,9 @@
+use crate::quick_display_and_error;
 use std::error::Error;
 use std::fmt::{Display, Formatter};
 
-mod power_socket;
-mod thermometer;
+pub mod power_socket;
+pub mod thermometer;
 
 enum DeviceCondition {
     Ok,
@@ -40,13 +41,4 @@ struct DeviceUpdateResult {
     err: Option<Box<dyn Error>>,
 }
 
-impl Display for DeviceUpdateResult {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        match &self.err {
-            Some(err) => write!(f, "{}", err.to_string()),
-            None => write!(f, "OK"),
-        }
-    }
-}
-
-impl Error for DeviceUpdateResult {}
+quick_display_and_error!(DeviceUpdateResult);

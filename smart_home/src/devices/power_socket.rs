@@ -1,7 +1,7 @@
 use crate::devices::{Device, DeviceStatus, DeviceUpdateResult};
 use std::error::Error;
 
-struct PowerSocket {
+pub struct PowerSocket {
     name: String,
     description: String,
     dsn: String,
@@ -11,6 +11,16 @@ struct PowerSocket {
 }
 
 impl PowerSocket {
+    pub(crate) fn new(name: &str) -> Self {
+        Self {
+            name: name.to_string(),
+            description: "".to_string(),
+            dsn: "".to_string(),
+            power: 0.0,
+            is_on: false,
+            last_updated: None,
+        }
+    }
     fn power_on(&mut self) -> DeviceUpdateResult {
         todo!()
     }
