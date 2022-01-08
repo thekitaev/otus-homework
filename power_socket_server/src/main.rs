@@ -42,17 +42,17 @@ fn main() {
                 };
                 Response::Status(format!("status: {}, power: {:.1}", status, power))
             }
-            DeviceRequest::DeviceAction {
-                method: DeviceAction::TurnOn,
-            } => {
-                state.is_on = true;
-                Response::Ok
-            }
-            DeviceRequest::DeviceAction {
-                method: DeviceAction::TurnOff,
-            } => {
-                state.is_on = false;
-                Response::Ok
+            DeviceRequest::DeviceAction { method } => {
+                match method {
+                    DeviceAction::TurnOn => {
+                        state.is_on = true;
+                        Response::Ok
+                    }
+                    DeviceAction::TurnOff => {
+                        state.is_on = false;
+                        Response::Ok
+                    }
+                },
             }
         };
         stream.write_all(resp.marshal().as_bytes()).unwrap();
