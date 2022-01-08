@@ -52,7 +52,7 @@ fn main() {
                         state.is_on = false;
                         Response::Ok
                     }
-                },
+                }
             }
         };
         stream.write_all(resp.marshal().as_bytes()).unwrap();
