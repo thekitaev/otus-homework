@@ -158,7 +158,10 @@ mod tests {
     #[test]
     fn test_collect_summary() {
         let blank_summary = format!("HOME '{}' SUMMARY:\n", "test home");
-        let summary_with_kitchen = format!("{}ROOM '{}' SUMMARY:\n\t* no devices *\n", blank_summary, KITCHEN);
+        let summary_with_kitchen = format!(
+            "{}ROOM '{}' SUMMARY:\n\t* no devices *\n",
+            blank_summary, KITCHEN
+        );
 
         let mut home = new_home();
         let summary = home.collect_summary();
