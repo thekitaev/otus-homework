@@ -81,6 +81,11 @@ impl Room {
 
     pub fn get_summary(&self) -> String {
         let mut out = String::new();
+        out.push_str(format!("ROOM '{}' SUMMARY:\n", &self.name).as_str());
+
+        if self.devices.is_empty() {
+            out.push_str("\t* no devices *")
+        }
 
         for device in self.devices.values() {
             let status = device.get_status();
@@ -90,6 +95,7 @@ impl Room {
             }
             out.push('\n')
         }
+        out.push('\n');
 
         out
     }
@@ -103,9 +109,10 @@ mod tests {
 
     static POWER_SOCKET: &str = "poser_socket";
     static THERMOMETER: &str = "thermometer";
+    static TEST_ROOM: &str = "test room";
 
     fn new_room() -> Room {
-        Room::new("test room")
+        Room::new(TEST_ROOM)
     }
 
     fn new_power_socket() -> PowerSocket {
@@ -125,6 +132,7 @@ mod tests {
         if let Some(err) = add_power_socket_ok.err {
             panic!("add_device failed: err {}", err)
         };
+
         let add_power_socket_err = room.add_device(POWER_SOCKET, Box::new(new_power_socket()));
         if let None = add_power_socket_err.err {
             panic!("add_device must have an err at this point")
@@ -134,6 +142,7 @@ mod tests {
         if let Some(err) = add_thermometer_ok.err {
             panic!("add_device failed: err {}", err)
         };
+
         let add_thermometer_err = room.add_device(THERMOMETER, Box::new(new_thermometer()));
         if let None = add_thermometer_err.err {
             panic!("add_device must have an err at this point")
@@ -142,21 +151,54 @@ mod tests {
 
     #[test]
     fn test_remove_device() {
-        todo!()
+        let mut room = new_room();
+        room.add_device(THERMOMETER, Box::new(new_thermometer()));
+
+        let remove_device_ok = room.remove_device(THERMOMETER);
+        if let Some(err) = remove_device_ok.err {
+            panic!("remove_device failed: err {}", err)
+        }
+
+        let remove_device_err = room.remove_device(THERMOMETER);
+        if let None = remove_device_err.err {
+            panic!("remove_device must have an err at this point")
+        };
     }
 
     #[test]
     fn test_list_devices() {
-        todo!()
+        let mut room = new_room();
+        room.add_device(THERMOMETER, Box::new(new_thermometer()));
+        room.add_device(POWER_SOCKET, Box::new(new_power_socket()));
+
+        let devices_list = room.list_devices();
+        assert_eq!(devices_list.len(), 2)
     }
 
     #[test]
     fn test_get_device() {
-        todo!()
+        let mut room = new_room();
+        room.add_device(THERMOMETER, Box::new(new_thermometer()));
+
+        let get_device_ok = room.get_device(THERMOMETER);
+        match get_device_ok {
+            Ok(_res) => println!("get_device OK"),
+            Err(err) => panic!("get_device err: {}", err),
+        }
+
+        let get_device_err = room.get_device(POWER_SOCKET);
+        if let Ok(_res) = get_device_err {
+            panic!("get_device must have an err at this point")
+        }
     }
 
     #[test]
     fn test_get_summary() {
-        todo!()
+        let blank_summary = format!("ROOM '{}' SUMMARY:\n\t* no devices *\n", TEST_ROOM);
+        let mut room = new_room();
+        assert_eq!(room.get_summary(), blank_summary);
+
+        room.add_device(THERMOMETER, Box::new(new_thermometer()));
+        assert_ne!(room.get_summary(), blank_summary);
     }
 }

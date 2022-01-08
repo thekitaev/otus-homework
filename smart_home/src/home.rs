@@ -82,6 +82,7 @@ impl Home {
 
     pub fn collect_summary(&self) -> String {
         let mut out = String::new();
+        out.push_str(format!("HOME '{}' SUMMARY:\n", &self.name).as_str());
 
         for room in self.rooms.values() {
             out.push_str(room.get_summary().as_str())
@@ -105,15 +106,13 @@ mod tests {
         let mut home = new_home();
 
         let add_room_ok = home.add_room(KITCHEN);
-        match add_room_ok.err {
-            Some(err) => panic!("err {} should not be present", err),
-            _ => {}
+        if let Some(err) = add_room_ok.err {
+            panic!("err {} should not be present", err)
         }
 
         let add_room_err = home.add_room(KITCHEN);
-        match add_room_err.err {
-            Some(_err) => {}
-            None => panic!("err should be present now, but it does not"),
+        if let None = add_room_err.err {
+            panic!("err should be present now, but it does not")
         }
     }
 
@@ -139,9 +138,8 @@ mod tests {
         home.add_room(KITCHEN);
 
         let remove_kitchen_ok = home.remove_room(KITCHEN);
-        match remove_kitchen_ok.err {
-            Some(err) => panic!("remove_room failed: err {}", err),
-            _ => {}
+        if let Some(err) = remove_kitchen_ok.err {
+            panic!("remove_room failed: err {}", err)
         }
     }
 
@@ -159,6 +157,15 @@ mod tests {
 
     #[test]
     fn test_collect_summary() {
-        todo!()
+        let blank_summary = format!("HOME '{}' SUMMARY:\n", "test home");
+        let summary_with_kitchen = format!("{}ROOM '{}' SUMMARY:\n\t* no devices *\n", blank_summary, KITCHEN);
+
+        let mut home = new_home();
+        let summary = home.collect_summary();
+        assert_eq!(summary, blank_summary);
+
+        home.add_room(KITCHEN);
+        let summary = home.collect_summary();
+        assert_eq!(summary, summary_with_kitchen)
     }
 }

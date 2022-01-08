@@ -22,13 +22,21 @@ impl Display for DeviceCondition {
 }
 
 pub struct DeviceStatus {
+    device_type: String,
+    name: String,
     condition: DeviceCondition,
     status: String,
 }
 
 impl DeviceStatus {
     pub fn as_string(&self) -> String {
-        format!("condition: {}, status: {}", self.condition, self.status)
+        format!(
+            "[{}]{}\n\tcondition: {}\n\tstatus: {}\n",
+            self.device_type.to_uppercase(),
+            self.name,
+            self.condition,
+            self.status
+        )
     }
 }
 
