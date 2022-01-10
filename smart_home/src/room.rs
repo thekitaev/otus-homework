@@ -106,6 +106,7 @@ mod tests {
     use crate::devices::power_socket::PowerSocket;
     use crate::devices::thermometer::Thermometer;
     use crate::room::Room;
+    use std::sync::{Arc, RwLock};
 
     static POWER_SOCKET: &str = "poser_socket";
     static THERMOMETER: &str = "thermometer";
@@ -115,7 +116,7 @@ mod tests {
         Room::new(TEST_ROOM)
     }
 
-    fn new_power_socket() -> PowerSocket {
+    fn new_power_socket() -> Arc<RwLock<PowerSocket>> {
         PowerSocket::new("test socket")
     }
 

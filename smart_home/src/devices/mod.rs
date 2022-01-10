@@ -1,6 +1,8 @@
 use crate::quick_display_and_error;
+use s_home_proto::{DeviceRequest, Marshal, Response};
 use std::error::Error;
 use std::fmt::{Display, Formatter};
+use std::io::{Read, Write};
 
 pub mod power_socket;
 pub mod thermometer;
@@ -42,6 +44,20 @@ impl DeviceStatus {
 
 pub trait Device {
     fn get_status(&self) -> Result<DeviceStatus, Box<dyn Error>>;
+    // fn start_poll(&mut self);
+}
+
+type DeviceTCPResult = Result<s_home_proto::Response, Box<dyn std::error::Error>>;
+
+pub(crate) fn make_device_tcp_request(dsn: &str, req: DeviceRequest) -> DeviceTCPResult {
+    let mut stream = std::net::TcpStream::connect(dsn).unwrap();
+    stream.write_all(req.marshal().as_bytes()).unwrap();
+
+    let mut buf = String::new();
+    stream.read_to_string(&mut buf).unwrap();
+
+    let resp = Response::unmarshal(buf.as_str()).unwrap();
+    Ok(resp)
 }
 
 #[derive(Debug)]

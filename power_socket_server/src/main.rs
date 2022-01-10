@@ -35,25 +35,19 @@ fn main() {
         let req = DeviceRequest::unmarshal(buf.as_str()).unwrap();
         let resp = match req {
             DeviceRequest::Ping => Response::Pong,
-            DeviceRequest::Status => {
-                let (status, power) = match state.is_on {
-                    true => ("on", state.power),
-                    false => ("off", 0.0),
-                };
-                Response::Status(format!("status: {}, power: {:.1}", status, power))
-            }
-            DeviceRequest::DeviceAction { method } => {
-                match method {
-                    DeviceAction::TurnOn => {
-                        state.is_on = true;
-                        Response::Ok
-                    }
-                    DeviceAction::TurnOff => {
-                        state.is_on = false;
-                        Response::Ok
-                    }
+            DeviceRequest::Status => Response::Status(state.is_on),
+            DeviceRequest::GetTemperature => Response::Power(state.power),
+            DeviceRequest::DeviceAction { method } => match method {
+                DeviceAction::TurnOn => {
+                    state.is_on = true;
+                    Response::Ok
                 }
-            }
+                DeviceAction::TurnOff => {
+                    state.is_on = false;
+                    Response::Ok
+                }
+            },
+            _ => Response::Err(format!("bad request: {:?}", req)),
         };
         stream.write_all(resp.marshal().as_bytes()).unwrap();
     }

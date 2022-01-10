@@ -34,13 +34,7 @@ fn main() {
                 let req = DeviceRequest::unmarshal(&s).unwrap();
                 let resp = match req {
                     DeviceRequest::Ping => Response::Pong,
-                    DeviceRequest::Status => {
-                        let (status, temp) = match state.is_on {
-                            true => ("on", state.temp),
-                            false => ("off", 0.0),
-                        };
-                        Response::Status(format!("status: {}, temp: {:.1}", status, temp))
-                    }
+                    DeviceRequest::Status => Response::Status(state.is_on),
                     DeviceRequest::DeviceAction { method } => {
                         match method {
                             DeviceAction::TurnOff => state.is_on = false,
@@ -48,6 +42,8 @@ fn main() {
                         };
                         Response::Ok
                     }
+                    DeviceRequest::GetTemperature => Response::Temperature(state.temp),
+                    _ => Response::Err("bad request".to_string()),
                 };
                 let message = resp.marshal();
                 socket.send(message.as_bytes().as_ref()).unwrap();

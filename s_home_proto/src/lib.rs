@@ -46,6 +46,8 @@ pub enum DeviceRequest {
     Ping,
     Status,
     DeviceAction { method: DeviceAction },
+    GetTemperature,
+    GetPower,
 }
 
 impl Marshal for DeviceRequest {}
@@ -55,7 +57,9 @@ pub enum Response {
     Pong,
     Ok,
     Err(String),
-    Status(String),
+    Status(bool),
+    Temperature(f32),
+    Power(f32),
 }
 
 impl Marshal for Response {}
