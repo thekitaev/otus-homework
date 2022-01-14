@@ -31,6 +31,15 @@ pub struct DeviceStatus {
 }
 
 impl DeviceStatus {
+    pub fn quick_unknown(name: &str, device_type: &str) -> Self {
+        Self {
+            device_type: device_type.to_string(),
+            name: name.to_string(),
+            condition: DeviceCondition::Unknown,
+            status: "UNKNOWN".to_string(),
+        }
+    }
+
     pub fn as_string(&self) -> String {
         format!(
             "[{}]{}\n\tcondition: {}\n\tstatus: {}\n",
@@ -63,6 +72,12 @@ pub(crate) fn make_device_tcp_request(dsn: &str, req: DeviceRequest) -> DeviceTC
 #[derive(Debug)]
 struct DeviceUpdateResult {
     err: Option<Box<dyn Error>>,
+}
+
+impl DeviceUpdateResult {
+    pub fn new(err: Option<Box<dyn Error>>) -> Self {
+        Self { err }
+    }
 }
 
 quick_display_and_error!(DeviceUpdateResult);

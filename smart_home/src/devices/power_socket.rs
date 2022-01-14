@@ -1,4 +1,6 @@
-use crate::devices::{make_device_tcp_request, Device, DeviceStatus, DeviceUpdateResult};
+use crate::devices::{
+    make_device_tcp_request, Device, DeviceCondition, DeviceStatus, DeviceUpdateResult,
+};
 use s_home_proto::{DeviceAction, DeviceRequest, Marshal, Response};
 use std::error::Error;
 use std::io::{Read, Write};
@@ -21,33 +23,33 @@ impl PowerSocket {
         let power_socket = Self {
             name: name.to_string(),
             description: "".to_string(),
-            dsn: "".to_string(),
+            dsn: "127.0.0.1:1234".to_string(),
             power: 0.0,
             is_on: false,
             last_updated: None,
             rx: None,
         };
-
-        let out = Arc::new(RwLock::new(power_socket));
-        Self::start_poll(out.clone());
-        out
+        Arc::new(RwLock::new(power_socket))
     }
 
     fn power_on(&mut self) -> DeviceUpdateResult {
         let req = DeviceRequest::DeviceAction {
             method: DeviceAction::TurnOn,
         };
-        self.set_on(req, true)
+        self.set_power(req, true)
     }
 
     fn power_off(&mut self) -> DeviceUpdateResult {
         let req = DeviceRequest::DeviceAction {
             method: DeviceAction::TurnOff,
         };
-        self.set_on(req, false)
+        self.set_power(req, false)
     }
 
-    fn set_on(&mut self, req: DeviceRequest, state: bool) -> DeviceUpdateResult {
+    fn set_power(&mut self, req: DeviceRequest, state: bool) -> DeviceUpdateResult {
+        if let None = self.rx {
+            return DeviceUpdateResult::new(None);
+        };
         let result = make_device_tcp_request(self.dsn.as_str(), req);
         let err = match result {
             Err(err) => Some(err),
@@ -63,7 +65,7 @@ impl PowerSocket {
                 }
             },
         };
-        DeviceUpdateResult { err }
+        DeviceUpdateResult::new(err)
     }
 
     fn get_power_consumption(&self) -> f32 {
@@ -71,12 +73,12 @@ impl PowerSocket {
     }
 
     // mx = мютекс,по привычке
-    fn start_poll(mx: Arc<RwLock<PowerSocket>>) {
+    fn start_poll(mx: Arc<RwLock<Self>>) {
         let read_guard = mx.read().unwrap();
         let dsn = String::from(read_guard.dsn.as_str());
         std::mem::drop(read_guard);
 
-        let mx_clone = mx.clone();
+        let mx_clone = Arc::clone(&mx);
 
         let jh: thread::JoinHandle<()> = thread::spawn(move || {
             println!("starting polling for power_socket");
@@ -111,31 +113,63 @@ impl PowerSocket {
     }
 }
 
-impl Device for PowerSocket {
+impl Device for Arc<RwLock<PowerSocket>> {
     fn get_status(&self) -> Result<DeviceStatus, Box<dyn Error>> {
-        todo!()
+        let guard = self.read().unwrap();
+        let device_type = "Power socket";
+        if guard.rx.is_none() {
+            return Ok(DeviceStatus::quick_unknown(
+                guard.name.as_str(),
+                device_type,
+            ));
+        }
+        Ok(DeviceStatus {
+            device_type: device_type.to_string(),
+            name: guard.name.to_string(),
+            condition: DeviceCondition::Ok,
+            status: format!("power: {}", guard.power),
+        })
     }
 }
 
 #[cfg(test)]
 mod tests {
+    use crate::devices::power_socket::PowerSocket;
+    use std::sync::{Arc, RwLock};
+
+    fn new_power_socket() -> Arc<RwLock<PowerSocket>> {
+        PowerSocket::new("test power socket")
+    }
+
     #[test]
     fn test_power_on() {
-        todo!()
+        let arc = new_power_socket();
+        let mut lock = arc.write().unwrap();
+        if let Some(err) = lock.power_on().err {
+            panic!("{}", err)
+        }
     }
 
     #[test]
     fn test_power_off() {
-        todo!()
+        let arc = new_power_socket();
+        let mut lock = arc.write().unwrap();
+        if let Some(err) = lock.power_off().err {
+            panic!("{}", err)
+        }
     }
 
     #[test]
     fn test_get_power_consumption() {
-        todo!()
+        let arc = new_power_socket();
+        let guard = arc.read().unwrap();
+        assert_eq!(guard.get_power_consumption(), 0.0)
     }
 
     #[test]
     fn test_get_status() {
-        todo!()
+        let arc = new_power_socket();
+        let _guard = arc.read().unwrap();
+        // TODO: make test
     }
 }

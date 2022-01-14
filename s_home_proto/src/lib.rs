@@ -48,6 +48,7 @@ pub enum DeviceRequest {
     DeviceAction { method: DeviceAction },
     GetTemperature,
     GetPower,
+    Exit,
 }
 
 impl Marshal for DeviceRequest {}
@@ -66,13 +67,15 @@ impl Marshal for Response {}
 
 #[cfg(test)]
 mod tests {
-    use crate::{HomeRequest, Marshal};
+    use crate::{DeviceRequest, Marshal};
 
     #[test]
     fn test_marshal() {
-        let req = HomeRequest::Ping;
+        let req = DeviceRequest::Ping;
         let bs = req.marshal();
-        let new_req = HomeRequest::unmarshal(&bs).unwrap();
+        println!("marshal result: {}", bs);
+
+        let new_req = DeviceRequest::unmarshal(&bs).unwrap();
         assert_eq!(req, new_req);
         println!("test marshal success")
     }

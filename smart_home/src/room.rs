@@ -120,7 +120,7 @@ mod tests {
         PowerSocket::new("test socket")
     }
 
-    fn new_thermometer() -> Thermometer {
+    fn new_thermometer() -> Arc<RwLock<Thermometer>> {
         Thermometer::new("test thermometer")
     }
 
