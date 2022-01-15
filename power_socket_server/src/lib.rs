@@ -5,6 +5,8 @@ use std::net::TcpListener;
 use std::thread::{sleep, spawn};
 use std::time::Duration;
 
+static SERVER_PREFIX: &str = "[SERVER]";
+
 pub struct State {
     is_on: bool,
     power: f32,
@@ -22,14 +24,19 @@ impl State {
 pub fn serve(mut state: State, port: u32) -> Result<(), Box<dyn std::error::Error>> {
     let address = format!("0.0.0.0:{}", port);
     let listener = TcpListener::bind(address.as_str()).unwrap();
-    println!("listening on {}", address);
+    println!(
+        "{} listening on {} with log level {}",
+        SERVER_PREFIX,
+        address,
+        log::max_level()
+    );
 
     spawn(move || {
         let mut rng = rand::thread_rng();
         let mut heartbeat = 0u32;
         loop {
             if heartbeat == 0 || heartbeat % 10 == 0 {
-                println!("heartbeat #{}", heartbeat)
+                println!("{} heartbeat #{}", SERVER_PREFIX, heartbeat)
             }
             heartbeat += 1;
 
@@ -42,12 +49,12 @@ pub fn serve(mut state: State, port: u32) -> Result<(), Box<dyn std::error::Erro
         let mut stream = stream.unwrap();
         let mut buf = String::new();
         stream.read_to_string(&mut buf).unwrap();
-        println!("buf: {}", buf.as_str());
+        println!("{} buf: {}", SERVER_PREFIX, buf.as_str());
 
         let mut exit_flag = false;
 
         let req = DeviceRequest::unmarshal(buf.as_str()).unwrap();
-        println!("request: {:?}", &req);
+        println!("{} request: {:?}", SERVER_PREFIX, &req);
 
         let resp = match req {
             DeviceRequest::Ping => Response::Pong,

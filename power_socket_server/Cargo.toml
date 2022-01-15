@@ -8,3 +8,5 @@ edition = "2021"
 [dependencies]
 s_home_proto = { path = "../s_home_proto" }
 rand = "0.8.4"
+log = "0.4.14"
+simple_logger = "1.16.0"
