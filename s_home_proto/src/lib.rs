@@ -1,19 +1,21 @@
 use serde::{Deserialize, Serialize};
-use serde_json::{from_str, to_string};
 
 pub trait Marshal {
     fn marshal(&self) -> String
-    where
-        Self: Serialize,
+        where
+            Self: Serialize,
     {
-        to_string(&self).unwrap()
+        let result = serde_json::to_string(&self).unwrap();
+        println!("marshal produced: {}", &result);
+        result
     }
     fn unmarshal<'a>(s: &'a str) -> serde_json::Result<Self>
-    where
-        Self: Sized,
-        Self: Deserialize<'a>,
+        where
+            Self: Sized,
+            Self: Deserialize<'a>,
     {
-        from_str(s)
+        println!("unmarshal got str: {}", s);
+        serde_json::from_str(s)
     }
 }
 
