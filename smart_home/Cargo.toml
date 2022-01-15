@@ -6,5 +6,4 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-string-error = "0.1.0"
 s_home_proto = { path = "../s_home_proto" }

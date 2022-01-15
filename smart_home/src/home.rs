@@ -34,10 +34,7 @@ quick_display_and_error!(HomeUpdateResult);
 impl Home {
     pub fn add_room(&mut self, name: &str) -> HomeUpdateResult {
         let err = if self.rooms.contains_key(name) {
-            Some(string_error::into_err(format!(
-                "home already contains room '{}'",
-                name
-            )))
+            Some(format!("home already contains room '{}'", name).into())
         } else {
             self.rooms.insert(name.to_string(), Room::new(name));
             None
@@ -50,20 +47,14 @@ impl Home {
             Ok(self.rooms.get(name).unwrap())
         } else {
             Err(HomeReadResult {
-                err: Some(string_error::into_err(format!(
-                    "home does not contain room '{}'",
-                    name
-                ))),
+                err: Some(format!("home does not contain room '{}'", name).into()),
             })
         }
     }
 
     pub fn remove_room(&mut self, name: &str) -> HomeUpdateResult {
         let err = if !self.rooms.contains_key(name) {
-            Some(string_error::into_err(format!(
-                "home does not contain room '{}'",
-                name
-            )))
+            Some(format!("home does not contain room '{}'", name).into())
         } else {
             self.rooms.remove(name);
             None

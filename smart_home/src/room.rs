@@ -32,10 +32,7 @@ impl Room {
     }
     pub fn add_device(&mut self, name: &str, device: Box<dyn Device>) -> RoomUpdateResult {
         let err = if self.devices.contains_key(name) {
-            Some(string_error::into_err(format!(
-                "room already contains device '{}'",
-                name
-            )))
+            Some(format!("room already contains device '{}'", name).into())
         } else {
             self.devices.insert(name.to_string(), device);
             None
@@ -45,10 +42,7 @@ impl Room {
 
     pub fn remove_device(&mut self, name: &str) -> RoomUpdateResult {
         let err = if !self.devices.contains_key(name) {
-            Some(string_error::into_err(format!(
-                "room does not contain device '{}'",
-                name
-            )))
+            Some(format!("room does not contain device '{}'", name).into())
         } else {
             self.devices.remove(name);
             None
@@ -71,10 +65,7 @@ impl Room {
             let device = self.devices.get(name).unwrap();
             Ok(device.as_ref())
         } else {
-            let err = Some(string_error::into_err(format!(
-                "device '{}' does not exist",
-                name
-            )));
+            let err = Some(format!("device '{}' does not exist", name).into());
             Err(RoomReadResult { err })
         }
     }

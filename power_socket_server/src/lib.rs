@@ -1,11 +1,11 @@
-use std::error::Error;
+use rand::Rng;
 use s_home_proto::{DeviceAction, DeviceRequest, Marshal, Response};
+use std::error::Error;
 use std::io::{Read, Write};
-use std::net::TcpListener;
+use std::net::{TcpListener, TcpStream};
 use std::sync::{Arc, Mutex};
 use std::thread::{sleep, spawn};
 use std::time::Duration;
-use rand::Rng;
 
 static SERVER_PREFIX: &str = "[SERVER]";
 
@@ -33,7 +33,7 @@ pub fn serve(state: Arc<Mutex<State>>, port: u32) -> Result<(), Box<dyn std::err
         log::max_level()
     );
 
-    let  state_clone = Arc::clone(&state);
+    let state_clone = Arc::clone(&state);
     spawn(move || {
         let mut rng = rand::thread_rng();
         let mut heartbeat = 0u32;
@@ -64,17 +64,23 @@ pub fn serve(state: Arc<Mutex<State>>, port: u32) -> Result<(), Box<dyn std::err
     Ok(())
 }
 
-fn handle_connection(mut stream: std::net::TcpStream, state: Arc<Mutex<State>>) -> Result<bool, Box<dyn Error>> {
+type HandleResult = Result<bool, Box<dyn Error>>;
+
+fn handle_connection(mut stream: TcpStream, state: Arc<Mutex<State>>) -> HandleResult {
     let mut buf = [0u8; 200];
     let message_len = stream.read(&mut buf).unwrap();
     println!("{} buf: {}", SERVER_PREFIX, message_len);
 
     let mut exit_flag = false;
 
-    let bs = String::from_utf8_lossy(&buf).to_string();
+    let bs = String::from_utf8_lossy(&buf[..message_len]).to_string();
     println!("{} message: {}", SERVER_PREFIX, bs.as_str());
 
-    let req = DeviceRequest::unmarshal(bs.as_str()).unwrap().into();
+    let req: DeviceRequest;
+    req = match DeviceRequest::unmarshal(bs.as_str()) {
+        Ok(r) => r,
+        Err(err) => return Err(format!("err unmarshalling device request {}: {}", bs, err).into()),
+    };
     println!("{} request: {:?}", SERVER_PREFIX, &req);
 
     let mut state = state.lock().unwrap();

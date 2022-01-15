@@ -24,8 +24,8 @@ fn test_request() {
     println!("{} packet written", CLIENT_PREFIX);
 
     let mut buf = String::new();
-    stream.read_to_string(&mut buf).unwrap();
-    println!("{} packet read", CLIENT_PREFIX);
+    let bytes_read = stream.read_to_string(&mut buf).unwrap();
+    println!("{} packet read {} bytes", CLIENT_PREFIX, bytes_read);
 
     let resp = Response::unmarshal(buf.as_str()).unwrap();
     assert_eq!(resp, Response::Pong)

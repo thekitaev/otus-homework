@@ -61,7 +61,7 @@ impl PowerSocket {
                 _ => {
                     let msg = format!("unexpected response: {:?}", resp);
                     println!("{}", msg);
-                    Some(string_error::into_err(msg))
+                    Some(msg.into())
                 }
             },
         };
@@ -72,7 +72,7 @@ impl PowerSocket {
         self.power
     }
 
-    // mx = мютекс,по привычке
+    // mx = мютекс, по привычке
     fn start_poll(mx: Arc<RwLock<Self>>) {
         let read_guard = mx.read().unwrap();
         let dsn = String::from(read_guard.dsn.as_str());
