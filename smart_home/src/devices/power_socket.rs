@@ -1,9 +1,8 @@
 use crate::devices::{
     make_device_tcp_request, Device, DeviceCondition, DeviceStatus, DeviceUpdateResult,
 };
-use s_home_proto::{DeviceAction, DeviceRequest, Marshal, Response};
+use s_home_proto::{DeviceAction, DeviceRequest, Response};
 use std::error::Error;
-use std::io::{Read, Write};
 use std::sync::{Arc, RwLock};
 use std::thread;
 use std::time::Duration;
@@ -33,21 +32,24 @@ impl PowerSocket {
     }
 
     fn power_on(&mut self) -> DeviceUpdateResult {
-        let req = DeviceRequest::DeviceAction {
-            method: DeviceAction::TurnOn,
-        };
-        self.set_power(req, true)
+        self.set_power(true)
     }
 
     fn power_off(&mut self) -> DeviceUpdateResult {
-        let req = DeviceRequest::DeviceAction {
-            method: DeviceAction::TurnOff,
-        };
-        self.set_power(req, false)
+        self.set_power(false)
     }
 
-    fn set_power(&mut self, req: DeviceRequest, state: bool) -> DeviceUpdateResult {
+    fn set_power(&mut self, state: bool) -> DeviceUpdateResult {
+        let device_action = if state {
+            DeviceAction::TurnOn
+        } else {
+            DeviceAction::TurnOff
+        };
+        let req = DeviceRequest::DeviceAction {
+            method: device_action,
+        };
         if let None = self.rx {
+            self.is_on = state;
             return DeviceUpdateResult::new(None);
         };
         let result = make_device_tcp_request(self.dsn.as_str(), req);
@@ -60,7 +62,7 @@ impl PowerSocket {
                 }
                 _ => {
                     let msg = format!("unexpected response: {:?}", resp);
-                    println!("{}", msg);
+                    eprintln!("{}", msg);
                     Some(msg.into())
                 }
             },
@@ -85,16 +87,14 @@ impl PowerSocket {
 
             let dsn = dsn.as_str();
             loop {
-                let mut stream = std::net::TcpStream::connect(dsn).unwrap();
+                let req = DeviceRequest::GetPower;
+                let response = make_device_tcp_request(dsn, req);
 
-                let req = DeviceRequest::GetPower.marshal();
-                stream.write_all(req.as_bytes()).unwrap();
-
-                let mut buf = String::new();
-                stream.read_to_string(&mut buf).unwrap();
-
-                let response = Response::unmarshal(buf.as_str()).unwrap();
-
+                if let Err(err) = response {
+                    eprintln!("request error: {}", err);
+                    continue;
+                }
+                let response = response.unwrap();
                 match response {
                     Response::Power(power) => {
                         let mut lock = mx_clone.write().unwrap();
@@ -102,7 +102,7 @@ impl PowerSocket {
                         lock.last_updated = Some(std::time::Instant::now());
                     }
                     _ => {
-                        println!("unexpected response: {:?}", response)
+                        eprintln!("unexpected response: {:?}", response)
                     }
                 }
 
