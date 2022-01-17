@@ -1,12 +1,11 @@
 use serde::{Deserialize, Serialize};
 
 pub trait Marshal {
-    fn marshal(&self) -> String
+    fn marshal(&self) -> serde_json::Result<String>
     where
         Self: Serialize,
     {
-        let result = serde_json::to_string(&self).unwrap();
-        result
+        serde_json::to_string(&self)
     }
     fn unmarshal<'a>(s: &'a str) -> serde_json::Result<Self>
     where
@@ -32,7 +31,7 @@ pub enum HomeAction {
 }
 
 #[derive(Serialize, Deserialize, PartialEq, Debug)]
-#[serde(tag = "type")]
+#[serde(tag = "home_request")]
 pub enum HomeRequest {
     Ping,
     Status,
@@ -45,7 +44,7 @@ pub enum HomeRequest {
 impl Marshal for HomeRequest {}
 
 #[derive(Serialize, Deserialize, PartialEq, Debug)]
-#[serde(tag = "type")]
+#[serde(tag = "device_request")]
 pub enum DeviceRequest {
     Ping,
     Status,
@@ -58,7 +57,7 @@ pub enum DeviceRequest {
 impl Marshal for DeviceRequest {}
 
 #[derive(Serialize, Deserialize, PartialEq, Debug)]
-#[serde(tag = "type")]
+#[serde(tag = "response", content = "value")]
 pub enum Response {
     Pong,
     Ok,
@@ -72,7 +71,7 @@ impl Marshal for Response {}
 
 #[cfg(test)]
 mod tests {
-    use crate::{DeviceAction, DeviceRequest, HomeAction, HomeRequest, Marshal};
+    use crate::{DeviceAction, DeviceRequest, HomeAction, HomeRequest, Marshal, Response};
 
     #[test]
     fn test_marshal_home_requests() {
@@ -85,7 +84,7 @@ mod tests {
             },
         ];
         for req in home_requests {
-            let bs = req.marshal();
+            let bs = req.marshal().unwrap();
             println!("marshal result: {}", bs);
 
             let new_req = HomeRequest::unmarshal(&bs).unwrap();
@@ -107,10 +106,30 @@ mod tests {
             DeviceRequest::Exit,
         ];
         for req in home_requests {
-            let bs = req.marshal();
+            let bs = req.marshal().unwrap();
             println!("marshal result: {}", bs);
 
             let new_req = DeviceRequest::unmarshal(&bs).unwrap();
+            assert_eq!(req, new_req);
+            println!("test marshal success")
+        }
+    }
+
+    #[test]
+    fn test_marshal_responses() {
+        let responses = vec![
+            Response::Ok,
+            Response::Pong,
+            Response::Status(true),
+            Response::Power(1.2),
+            Response::Temperature(5.0),
+            Response::Err("something".to_string()),
+        ];
+        for req in responses {
+            let bs = req.marshal().unwrap();
+            println!("marshal result: {}", bs);
+
+            let new_req = Response::unmarshal(&bs).unwrap();
             assert_eq!(req, new_req);
             println!("test marshal success")
         }

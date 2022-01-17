@@ -45,7 +45,7 @@ fn main() {
                     DeviceRequest::GetTemperature => Response::Temperature(state.temp),
                     _ => Response::Err("bad request".to_string()),
                 };
-                let message = resp.marshal();
+                let message = resp.marshal().unwrap();
                 socket.send(message.as_bytes().as_ref()).unwrap();
             }
             Err(e) => println!("err receiving a datagram: {}", &e),

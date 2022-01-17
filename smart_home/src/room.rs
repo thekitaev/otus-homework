@@ -108,7 +108,7 @@ mod tests {
     }
 
     fn new_power_socket() -> Arc<RwLock<PowerSocket>> {
-        PowerSocket::new("test socket")
+        PowerSocket::new("test socket", "", "127.0.0.1:1234")
     }
 
     fn new_thermometer() -> Arc<RwLock<Thermometer>> {

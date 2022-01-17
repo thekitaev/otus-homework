@@ -52,7 +52,7 @@ pub fn serve(state: Arc<Mutex<State>>, port: u32) -> Result<(), Box<dyn std::err
         let stream = stream.unwrap();
         let state = Arc::clone(&state);
 
-        let result = handle_connection(stream, state);
+        let result = handle_request(stream, state);
         match result {
             Ok(true) => break,
             Ok(false) => {
@@ -66,7 +66,7 @@ pub fn serve(state: Arc<Mutex<State>>, port: u32) -> Result<(), Box<dyn std::err
 
 type HandleResult = Result<bool, Box<dyn Error>>;
 
-fn handle_connection(mut stream: TcpStream, state: Arc<Mutex<State>>) -> HandleResult {
+fn handle_request(mut stream: TcpStream, state: Arc<Mutex<State>>) -> HandleResult {
     let mut buf = [0u8; 200];
     let message_len = stream.read(&mut buf).unwrap();
     println!("{} buf: {}", SERVER_PREFIX, message_len);
@@ -88,7 +88,7 @@ fn handle_connection(mut stream: TcpStream, state: Arc<Mutex<State>>) -> HandleR
     let resp = match req {
         DeviceRequest::Ping => Response::Pong,
         DeviceRequest::Status => Response::Status(state.is_on),
-        DeviceRequest::GetTemperature => Response::Power(state.power),
+        DeviceRequest::GetPower => Response::Power(state.power),
         DeviceRequest::DeviceAction { method } => match method {
             DeviceAction::TurnOn => {
                 state.is_on = true;
@@ -106,7 +106,9 @@ fn handle_connection(mut stream: TcpStream, state: Arc<Mutex<State>>) -> HandleR
         }
         _ => Response::Err(format!("bad request: {:?}", req)),
     };
-    stream.write_all(resp.marshal().as_bytes()).unwrap();
+    stream
+        .write_all(resp.marshal().unwrap().as_bytes())
+        .unwrap();
     // exit totally
     if exit_flag {
         return Ok(true);

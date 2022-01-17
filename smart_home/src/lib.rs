@@ -1,6 +1,6 @@
 #![allow(dead_code)]
 
-mod devices;
+pub mod devices;
 mod home;
 mod room;
 

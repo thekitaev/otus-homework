@@ -18,11 +18,11 @@ pub struct PowerSocket {
 }
 
 impl PowerSocket {
-    pub(crate) fn new(name: &str) -> Arc<RwLock<Self>> {
+    pub fn new(name: &str, description: &str, dsn: &str) -> Arc<RwLock<Self>> {
         let power_socket = Self {
             name: name.to_string(),
-            description: "".to_string(),
-            dsn: "127.0.0.1:1234".to_string(),
+            description: description.to_string(),
+            dsn: dsn.to_string(),
             power: 0.0,
             is_on: false,
             last_updated: None,
@@ -31,27 +31,28 @@ impl PowerSocket {
         Arc::new(RwLock::new(power_socket))
     }
 
-    fn power_on(&mut self) -> DeviceUpdateResult {
+    pub fn power_on(&mut self) -> DeviceUpdateResult {
         self.set_power(true)
     }
 
-    fn power_off(&mut self) -> DeviceUpdateResult {
+    pub fn power_off(&mut self) -> DeviceUpdateResult {
         self.set_power(false)
     }
 
     fn set_power(&mut self, state: bool) -> DeviceUpdateResult {
-        let device_action = if state {
+        let method = if state {
             DeviceAction::TurnOn
         } else {
             DeviceAction::TurnOff
         };
-        let req = DeviceRequest::DeviceAction {
-            method: device_action,
-        };
-        if let None = self.rx {
+        let req = DeviceRequest::DeviceAction { method };
+
+        // if polling is not active
+        if self.rx.is_none() {
             self.is_on = state;
             return DeviceUpdateResult::new(None);
         };
+
         let result = make_device_tcp_request(self.dsn.as_str(), req);
         let err = match result {
             Err(err) => Some(err),
@@ -70,14 +71,22 @@ impl PowerSocket {
         DeviceUpdateResult::new(err)
     }
 
-    fn get_power_consumption(&self) -> f32 {
+    pub fn get_power_consumption(&self) -> f32 {
         self.power
     }
 
     // mx = мютекс, по привычке
-    fn start_poll(mx: Arc<RwLock<Self>>) {
+    pub fn start_poll(mx: Arc<RwLock<Self>>) {
         let read_guard = mx.read().unwrap();
         let dsn = String::from(read_guard.dsn.as_str());
+        if read_guard.dsn.is_empty() {
+            eprintln!(
+                "cannot start a poll for power socket {}: dsn is empty",
+                read_guard.name
+            );
+            return;
+        }
+
         std::mem::drop(read_guard);
 
         let mx_clone = Arc::clone(&mx);
@@ -137,8 +146,10 @@ mod tests {
     use crate::devices::power_socket::PowerSocket;
     use std::sync::{Arc, RwLock};
 
+    extern crate power_socket_server;
+
     fn new_power_socket() -> Arc<RwLock<PowerSocket>> {
-        PowerSocket::new("test power socket")
+        PowerSocket::new("test power socket", "", "127.0.0.1:1234")
     }
 
     #[test]
@@ -164,12 +175,5 @@ mod tests {
         let arc = new_power_socket();
         let guard = arc.read().unwrap();
         assert_eq!(guard.get_power_consumption(), 0.0)
-    }
-
-    #[test]
-    fn test_get_status() {
-        let arc = new_power_socket();
-        let _guard = arc.read().unwrap();
-        // TODO: make test
     }
 }
