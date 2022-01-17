@@ -1,23 +1,26 @@
 use crate::devices::{Device, DeviceCondition, DeviceStatus};
 use std::error::Error;
+use std::net::UdpSocket;
 use std::sync::{Arc, RwLock};
 use std::thread;
+use std::time::Duration;
+use s_home_proto::{DeviceRequest, Marshal, Response};
 
 pub struct Thermometer {
     name: String,
     description: String,
     dsn: String,
-    temp: f64,
+    temp: f32,
     last_updated: Option<std::time::Instant>,
     rx: Option<thread::JoinHandle<()>>,
 }
 
 impl Thermometer {
-    pub(crate) fn new(name: &str) -> Arc<RwLock<Self>> {
+    pub fn new(name: &str, description: &str, dsn: &str) -> Arc<RwLock<Self>> {
         let thermometer = Self {
             name: name.to_string(),
-            description: "".to_string(),
-            dsn: "127.0.0.1:12345".to_string(),
+            description: description.to_string(),
+            dsn: dsn.to_string(),
             temp: 0.0,
             last_updated: None,
             rx: None,
@@ -25,21 +28,44 @@ impl Thermometer {
         Arc::new(RwLock::new(thermometer))
     }
 
-    fn get_temp(&self) -> f64 {
+    pub fn get_temp(&self) -> f32 {
         self.temp
     }
 
-    fn start_poll(mx: Arc<RwLock<Self>>) {
+    pub fn start_poll(mx: Arc<RwLock<Self>>) {
         let read_guard = mx.read().unwrap();
-        // let dsn = read_guard.dsn.clone();
+        let dsn = read_guard.dsn.clone();
         std::mem::drop(read_guard);
 
-        // let mx_clone = Arc::clone(&mx);
+        let mx_clone = Arc::clone(&mx);
 
         let jh = thread::spawn(move || {
             println!("starting polling for thermometer");
 
-            // let dsn = dsn.as_str();
+            loop {
+                let dsn = dsn.as_str();
+                let socket = UdpSocket::bind("127.0.0.1:1222").unwrap();
+
+                socket.connect(dsn).unwrap();
+                socket.send(DeviceRequest::GetTemperature.marshal().unwrap().as_bytes()).unwrap();
+
+                let mut buf = [0u8; 512];
+                let bytes_read = socket.recv(&mut buf).unwrap();
+
+                let msg = String::from_utf8_lossy(&buf[..bytes_read]).to_string();
+                let resp = Response::unmarshal(msg.as_str()).unwrap();
+
+                match resp {
+                    Response::Temperature(temp) => {
+                        println!("[CLIENT] temp changed to {}", temp);
+                        mx_clone.write().unwrap().temp = temp;
+                        println!("[CLIENT] saved new temp")
+                    }
+                    _ => eprintln!("unexpected response: {:?}", resp)
+                }
+
+                thread::sleep(Duration::from_secs(1));
+            }
         });
 
         mx.write().unwrap().rx = Some(jh)
@@ -71,7 +97,7 @@ mod tests {
     use std::sync::{Arc, RwLock};
 
     fn new_thermometer() -> Arc<RwLock<Thermometer>> {
-        Thermometer::new("test thermometer")
+        Thermometer::new("test thermometer", "", "127.0.0.1:1234")
     }
 
     #[test]

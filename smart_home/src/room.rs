@@ -112,7 +112,7 @@ mod tests {
     }
 
     fn new_thermometer() -> Arc<RwLock<Thermometer>> {
-        Thermometer::new("test thermometer")
+        Thermometer::new("test thermometer", "", "127.0.0.1:12345")
     }
 
     #[test]

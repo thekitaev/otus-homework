@@ -10,3 +10,4 @@ s_home_proto = { path = "../s_home_proto" }
 
 [dev-dependencies]
 power_socket_server = { path = "../power_socket_server"}
+thermometer_server = { path = "../thermometer_server"}

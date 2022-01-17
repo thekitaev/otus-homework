@@ -1,15 +1,11 @@
 use smart_home::devices::power_socket::PowerSocket;
-use std::sync::{Arc, RwLock};
+use std::sync::{Arc};
 use std::thread;
 use std::time::Duration;
 
-fn new_power_socket() -> Arc<RwLock<PowerSocket>> {
-    PowerSocket::new("test power socket", "", "127.0.0.1:1234")
-}
-
 #[test]
-fn test_power_socket_with_mock_server() {
-    let arc = new_power_socket();
+fn test_with_mock_server() {
+    let arc = PowerSocket::new("test power socket", "", "127.0.0.1:1234");
 
     let state = power_socket_server::State::new();
     let _server_thread = thread::spawn(move || power_socket_server::serve(state, 1234).unwrap());
