@@ -1,5 +1,5 @@
 use smart_home::devices::power_socket::PowerSocket;
-use std::sync::{Arc};
+use std::sync::Arc;
 use std::thread;
 use std::time::Duration;
 

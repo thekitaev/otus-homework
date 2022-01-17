@@ -20,7 +20,6 @@ fn test_with_mock_server() {
     println!("temp = {}", temp);
     assert_ne!(temp, 20.0, "temp should not be default");
 
-
     thread::sleep(Duration::from_secs(1));
     let new_temp = arc.read().unwrap().get_temp();
     println!("new_temp = {}", new_temp);

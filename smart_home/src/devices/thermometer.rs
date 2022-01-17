@@ -1,10 +1,10 @@
 use crate::devices::{Device, DeviceCondition, DeviceStatus};
+use s_home_proto::{DeviceRequest, Marshal, Response};
 use std::error::Error;
 use std::net::UdpSocket;
 use std::sync::{Arc, RwLock};
 use std::thread;
 use std::time::Duration;
-use s_home_proto::{DeviceRequest, Marshal, Response};
 
 pub struct Thermometer {
     name: String,
@@ -47,7 +47,9 @@ impl Thermometer {
                 let socket = UdpSocket::bind("127.0.0.1:1222").unwrap();
 
                 socket.connect(dsn).unwrap();
-                socket.send(DeviceRequest::GetTemperature.marshal().unwrap().as_bytes()).unwrap();
+                socket
+                    .send(DeviceRequest::GetTemperature.marshal().unwrap().as_bytes())
+                    .unwrap();
 
                 let mut buf = [0u8; 512];
                 let bytes_read = socket.recv(&mut buf).unwrap();
@@ -61,7 +63,7 @@ impl Thermometer {
                         mx_clone.write().unwrap().temp = temp;
                         println!("[CLIENT] saved new temp")
                     }
-                    _ => eprintln!("unexpected response: {:?}", resp)
+                    _ => eprintln!("unexpected response: {:?}", resp),
                 }
 
                 thread::sleep(Duration::from_secs(1));
