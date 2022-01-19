@@ -3,9 +3,17 @@ use s_home_proto::{DeviceRequest, Marshal, Response};
 use std::error::Error;
 use std::fmt::{Display, Formatter};
 use std::io::{Read, Write};
+use std::net::UdpSocket;
+use std::time::{Duration, Instant};
 
 pub mod power_socket;
 pub mod thermometer;
+
+static UPDATE_INTERVAL: Duration = Duration::from_millis(500);
+
+fn device_needs_update(updated: Option<Instant>) -> bool {
+    updated.is_none() || updated.unwrap().lt(&(Instant::now() - UPDATE_INTERVAL))
+}
 
 enum DeviceCondition {
     Ok,
@@ -56,9 +64,9 @@ pub trait Device {
     // fn start_poll(&mut self);
 }
 
-type DeviceTCPResult = Result<s_home_proto::Response, Box<dyn std::error::Error>>;
+type DeviceRequestResult = Result<s_home_proto::Response, Box<dyn std::error::Error>>;
 
-pub(crate) fn make_device_tcp_request(dsn: &str, req: DeviceRequest) -> DeviceTCPResult {
+pub(crate) fn make_device_tcp_request(dsn: &str, req: DeviceRequest) -> DeviceRequestResult {
     println!("[TCP FUNC] making request: {:?}", &req);
 
     let mut stream = std::net::TcpStream::connect(dsn).unwrap();
@@ -71,6 +79,20 @@ pub(crate) fn make_device_tcp_request(dsn: &str, req: DeviceRequest) -> DeviceTC
     println!("[TCP FUNC] READ {} bytes", bytes_read);
 
     let resp = Response::unmarshal(buf.as_str()).unwrap();
+    Ok(resp)
+}
+
+pub(crate) fn make_device_udp_request(dsn: &str, req: DeviceRequest) -> DeviceRequestResult {
+    let socket = UdpSocket::bind("0.0.0.0:0").unwrap();
+
+    socket.connect(dsn).unwrap();
+    socket.send(req.marshal().unwrap().as_bytes()).unwrap();
+
+    let mut buf = [0u8; 512];
+    let bytes_read = socket.recv(&mut buf).unwrap();
+
+    let msg = String::from_utf8_lossy(&buf[..bytes_read]).to_string();
+    let resp = Response::unmarshal(msg.as_str()).unwrap();
     Ok(resp)
 }
 
