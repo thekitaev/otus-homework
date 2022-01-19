@@ -1,7 +1,7 @@
 use crate::quick_display_and_error;
 use s_home_proto::{DeviceRequest, Marshal, Response};
 use std::error::Error;
-use std::fmt::{Display, Formatter};
+use std::fmt::{write, Debug, Display, Formatter};
 use std::io::{Read, Write};
 use std::net::UdpSocket;
 use std::time::{Duration, Instant};
@@ -15,10 +15,21 @@ fn device_needs_update(updated: Option<Instant>) -> bool {
     updated.is_none() || updated.unwrap().lt(&(Instant::now() - UPDATE_INTERVAL))
 }
 
+#[derive(Eq, PartialEq)]
 enum DeviceCondition {
     Ok,
-    Err(Box<dyn Error>),
+    Err(String),
     Unknown,
+}
+
+impl Clone for DeviceCondition {
+    fn clone(&self) -> Self {
+        match self {
+            Self::Ok => Self::Ok,
+            Self::Unknown => Self::Unknown,
+            Self::Err(err) => Self::Err(err.to_string()),
+        }
+    }
 }
 
 impl Display for DeviceCondition {
@@ -31,11 +42,13 @@ impl Display for DeviceCondition {
     }
 }
 
+#[derive(Eq, PartialEq)]
 pub struct DeviceStatus {
     device_type: String,
     name: String,
     condition: DeviceCondition,
     status: String,
+    updated: Option<Instant>,
 }
 
 impl DeviceStatus {
@@ -45,6 +58,7 @@ impl DeviceStatus {
             name: name.to_string(),
             condition: DeviceCondition::Unknown,
             status: "UNKNOWN".to_string(),
+            updated: None,
         }
     }
 
@@ -57,10 +71,28 @@ impl DeviceStatus {
             self.status
         )
     }
+
+    fn as_compact_string(&self) -> String {
+        let updated = if self.updated.is_none() {
+            "NEVER".to_string()
+        } else {
+            format!("{:.1}", self.updated.unwrap().elapsed().as_secs_f32())
+        };
+        format!(
+            "[{}]{}-{}*{} UPD: {}",
+            self.condition, self.device_type, self.name, self.status, updated
+        )
+    }
+}
+
+impl Debug for DeviceStatus {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write(f, format_args!("{}", self.as_compact_string()))
+    }
 }
 
 pub trait Device {
-    fn get_status(&self) -> Result<DeviceStatus, Box<dyn Error>>;
+    fn get_status(&self) -> DeviceStatus;
     // fn start_poll(&mut self);
 }
 

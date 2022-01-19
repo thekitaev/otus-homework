@@ -80,10 +80,7 @@ impl Room {
 
         for device in self.devices.values() {
             let status = device.get_status();
-            match status {
-                Ok(s) => out.push_str(s.as_string().as_str()),
-                Err(err) => out.push_str(format!("error getting status: {}", err).as_str()),
-            }
+            out.push_str(status.as_string().as_str());
             out.push('\n')
         }
         out.push('\n');

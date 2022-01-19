@@ -6,22 +6,31 @@ use s_home_proto::{DeviceAction, DeviceRequest, Response};
 use std::error::Error;
 use std::time::Instant;
 
+static DEVICE_NAME: &str = "PSOC";
+
 pub struct PowerSocket {
     name: String,
     dsn: String,
     power: f32,
     is_on: bool,
+    condition: DeviceCondition,
     last_updated: Option<Instant>,
 }
 
 impl PowerSocket {
     pub fn new(name: &str, dsn: &str) -> Self {
+        let condition = if dsn.is_empty() {
+            DeviceCondition::Ok
+        } else {
+            DeviceCondition::Unknown
+        };
         Self {
             name: name.to_string(),
             dsn: dsn.to_string(),
             power: 0.0,
             is_on: false,
             last_updated: None,
+            condition,
         }
     }
 
@@ -72,10 +81,17 @@ impl PowerSocket {
                 Response::Power(val) => {
                     self.power = val;
                     self.last_updated = Some(Instant::now());
+                    self.condition = DeviceCondition::Ok;
                     Ok(val)
                 }
-                Response::Err(err) => Err(format!("err requesting power: {}", err).into()),
-                _ => Err(format!("unexpected response: {:?}", resp).into()),
+                Response::Err(err_msg) => {
+                    self.condition = DeviceCondition::Err(err_msg.to_string());
+                    Err(format!("err requesting power: {}", err_msg).into())
+                }
+                _ => {
+                    self.condition = DeviceCondition::Unknown;
+                    Err(format!("unexpected response: {:?}", resp).into())
+                }
             };
         }
         Ok(self.power)
@@ -83,33 +99,33 @@ impl PowerSocket {
 }
 
 impl Device for PowerSocket {
-    fn get_status(&self) -> Result<DeviceStatus, Box<dyn Error>> {
-        let device_type = "Power socket";
-
-        Ok(DeviceStatus {
-            device_type: device_type.to_string(),
+    fn get_status(&self) -> DeviceStatus {
+        DeviceStatus {
+            device_type: DEVICE_NAME.to_string(),
             name: self.name.to_string(),
-            condition: DeviceCondition::Ok,
+            condition: self.condition.clone(),
             status: format!("power: {}", self.power),
-        })
+            updated: self.last_updated,
+        }
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use crate::devices::power_socket::PowerSocket;
+    use crate::devices::power_socket::{PowerSocket, DEVICE_NAME};
+    use crate::devices::{Device, DeviceCondition, DeviceStatus};
 
-    extern crate power_socket_server;
+    const NAME: &str = "test power socket";
 
     fn new_power_socket() -> PowerSocket {
-        PowerSocket::new("test power socket", "")
+        PowerSocket::new(NAME, "")
     }
 
     #[test]
     fn test_power_on() {
         let mut device = new_power_socket();
         if let Some(err) = device.power_on().err {
-            panic!("{}", err)
+            panic!("{err}")
         }
     }
 
@@ -117,7 +133,7 @@ mod tests {
     fn test_power_off() {
         let mut device = new_power_socket();
         if let Some(err) = device.power_off().err {
-            panic!("{}", err)
+            panic!("{err}")
         }
     }
 
@@ -129,7 +145,20 @@ mod tests {
 
     #[test]
     fn test_get_status() {
-        let _device = new_power_socket();
-        // TODO: make test
+        let device = new_power_socket();
+
+        let have = device.get_status();
+        let mut want = DeviceStatus {
+            device_type: DEVICE_NAME.to_string(),
+            name: NAME.to_string(),
+            condition: DeviceCondition::Ok,
+            status: format!("power: {}", 0.0),
+            updated: None,
+        };
+        assert_eq!(have, want);
+
+        // testing Eq trait works :-)
+        want.status = "changed".to_string();
+        assert_ne!(have, want)
     }
 }

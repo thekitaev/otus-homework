@@ -5,10 +5,13 @@ use s_home_proto::{DeviceRequest, Response};
 use std::error::Error;
 use std::time::Instant;
 
+static DEVICE_NAME: &str = "THRM";
+
 pub struct Thermometer {
     name: String,
     dsn: String,
     temp: f32,
+    condition: DeviceCondition,
     last_updated: Option<Instant>,
 }
 
@@ -18,6 +21,11 @@ impl Thermometer {
             name: name.to_string(),
             dsn: dsn.to_string(),
             temp: 0.0,
+            condition: if dsn.is_empty() {
+                DeviceCondition::Ok
+            } else {
+                DeviceCondition::Unknown
+            },
             last_updated: None,
         }
     }
@@ -29,10 +37,17 @@ impl Thermometer {
                 Response::Temperature(val) => {
                     self.temp = val;
                     self.last_updated = Some(Instant::now());
+                    self.condition = DeviceCondition::Ok;
                     Ok(val)
                 }
-                Response::Err(err) => Err(format!("err requesting temperature: {}", err).into()),
-                _ => Err(format!("unexpected response: {:?}", resp).into()),
+                Response::Err(err_msg) => {
+                    self.condition = DeviceCondition::Err(err_msg.to_string());
+                    Err(format!("err requesting temperature: {}", err_msg).into())
+                }
+                _ => {
+                    self.condition = DeviceCondition::Unknown;
+                    Err(format!("unexpected response: {:?}", resp).into())
+                }
             };
         }
         Ok(self.temp)
@@ -40,24 +55,25 @@ impl Thermometer {
 }
 
 impl Device for Thermometer {
-    fn get_status(&self) -> Result<DeviceStatus, Box<dyn Error>> {
-        let device_type = "Thermometer";
-
-        Ok(DeviceStatus {
-            device_type: device_type.to_string(),
+    fn get_status(&self) -> DeviceStatus {
+        DeviceStatus {
+            device_type: DEVICE_NAME.to_string(),
             name: self.name.to_string(),
-            condition: DeviceCondition::Ok,
+            condition: self.condition.clone(),
             status: format!("temperature: {}", self.temp),
-        })
+            updated: self.last_updated,
+        }
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use crate::devices::thermometer::Thermometer;
+    use crate::devices::thermometer::{Thermometer, DEVICE_NAME};
+    use crate::devices::{Device, DeviceCondition, DeviceStatus};
+    const NAME: &str = "test thermometer";
 
     fn new_thermometer() -> Thermometer {
-        Thermometer::new("test thermometer", "")
+        Thermometer::new(NAME, "")
     }
 
     #[test]
@@ -68,7 +84,19 @@ mod tests {
 
     #[test]
     fn test_get_status() {
-        let _device = new_thermometer();
-        // TODO: make test
+        let device = new_thermometer();
+
+        let have = device.get_status();
+        let mut want = DeviceStatus {
+            device_type: DEVICE_NAME.to_string(),
+            name: NAME.to_string(),
+            condition: DeviceCondition::Ok,
+            status: format!("temperature: {}", 0.0),
+            updated: None,
+        };
+        assert_eq!(have, want);
+
+        want.status = "changed".to_string();
+        assert_ne!(have, want)
     }
 }
