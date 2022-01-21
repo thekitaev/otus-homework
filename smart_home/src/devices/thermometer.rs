@@ -30,9 +30,9 @@ impl Thermometer {
         }
     }
 
-    pub fn get_temp(&mut self) -> Result<f32, Box<dyn Error>> {
+    pub async fn get_temp(&mut self) -> Result<f32, Box<dyn Error>> {
         if !self.dsn.is_empty() && device_needs_update(self.last_updated) {
-            let resp = make_device_udp_request(&self.dsn, DeviceRequest::GetTemperature).unwrap();
+            let resp = make_device_udp_request(&self.dsn, DeviceRequest::GetTemperature).await?;
             return match resp {
                 Response::Temperature(val) => {
                     self.temp = val;
@@ -70,16 +70,19 @@ impl Device for Thermometer {
 mod tests {
     use crate::devices::thermometer::{Thermometer, DEVICE_NAME};
     use crate::devices::{Device, DeviceCondition, DeviceStatus};
+    use tokio;
+
     const NAME: &str = "test thermometer";
 
     fn new_thermometer() -> Thermometer {
         Thermometer::new(NAME, "")
     }
 
-    #[test]
-    fn test_get_temp() {
+    #[tokio::test]
+    async fn test_get_temp() {
         let mut device = new_thermometer();
-        assert_eq!(device.get_temp().unwrap(), 0.0)
+        let temp = device.get_temp().await.unwrap();
+        assert_eq!(temp, 0.0)
     }
 
     #[test]

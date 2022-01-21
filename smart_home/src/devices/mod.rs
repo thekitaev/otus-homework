@@ -2,9 +2,9 @@ use crate::quick_display_and_error;
 use s_home_proto::{DeviceRequest, Marshal, Response};
 use std::error::Error;
 use std::fmt::{write, Debug, Display, Formatter};
-use std::io::{Read, Write};
-use std::net::UdpSocket;
 use std::time::{Duration, Instant};
+use tokio::io;
+use tokio::net::{TcpStream, UdpSocket};
 
 pub mod power_socket;
 pub mod thermometer;
@@ -98,33 +98,44 @@ pub trait Device {
 
 type DeviceRequestResult = Result<s_home_proto::Response, Box<dyn std::error::Error>>;
 
-pub(crate) fn make_device_tcp_request(dsn: &str, req: DeviceRequest) -> DeviceRequestResult {
+pub(crate) async fn make_device_tcp_request(dsn: &str, req: DeviceRequest) -> DeviceRequestResult {
     println!("[TCP FUNC] making request: {:?}", &req);
 
-    let mut stream = std::net::TcpStream::connect(dsn).unwrap();
-    let msg = req.marshal().unwrap();
-    let bytes_written = stream.write(msg.as_bytes()).unwrap();
+    let stream = TcpStream::connect(dsn).await?;
+    let msg = req.marshal()?;
+    let bytes_written = stream.try_write(msg.as_bytes())?;
     println!("[TCP FUNC] WRITTEN {} bytes", bytes_written);
 
-    let mut buf = String::new();
-    let bytes_read = stream.read_to_string(&mut buf).unwrap();
-    println!("[TCP FUNC] READ {} bytes", bytes_read);
+    let mut buf = Vec::with_capacity(512);
+    loop {
+        stream.readable().await?;
 
-    let resp = Response::unmarshal(buf.as_str()).unwrap();
+        match stream.try_read_buf(&mut buf) {
+            Ok(0) => break,
+            Ok(n) => println!("[TCP FUNC] READ {} bytes", n),
+            Err(ref e) if e.kind() == io::ErrorKind::WouldBlock => {
+                eprintln!("got error @ try_read_buf: {}", &e);
+                continue;
+            }
+            Err(e) => return Err(e.into()),
+        }
+    }
+
+    let resp = Response::unmarshal(std::str::from_utf8(&buf)?).unwrap();
     Ok(resp)
 }
 
-pub(crate) fn make_device_udp_request(dsn: &str, req: DeviceRequest) -> DeviceRequestResult {
-    let socket = UdpSocket::bind("0.0.0.0:0").unwrap();
+pub(crate) async fn make_device_udp_request(dsn: &str, req: DeviceRequest) -> DeviceRequestResult {
+    let socket = UdpSocket::bind("0.0.0.0:0").await?;
 
-    socket.connect(dsn).unwrap();
-    socket.send(req.marshal().unwrap().as_bytes()).unwrap();
+    socket.connect(dsn).await?;
+    socket.send(req.marshal().unwrap().as_bytes()).await?;
 
     let mut buf = [0u8; 512];
-    let bytes_read = socket.recv(&mut buf).unwrap();
+    let bytes_read = socket.recv(&mut buf).await?;
 
     let msg = String::from_utf8_lossy(&buf[..bytes_read]).to_string();
-    let resp = Response::unmarshal(msg.as_str()).unwrap();
+    let resp = Response::unmarshal(msg.as_str())?;
     Ok(resp)
 }
 

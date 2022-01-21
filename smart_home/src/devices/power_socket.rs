@@ -34,15 +34,15 @@ impl PowerSocket {
         }
     }
 
-    pub fn power_on(&mut self) -> DeviceUpdateResult {
-        self.set_power(true)
+    pub async fn power_on(&mut self) -> DeviceUpdateResult {
+        self.set_power(true).await
     }
 
-    pub fn power_off(&mut self) -> DeviceUpdateResult {
-        self.set_power(false)
+    pub async fn power_off(&mut self) -> DeviceUpdateResult {
+        self.set_power(false).await
     }
 
-    fn set_power(&mut self, state: bool) -> DeviceUpdateResult {
+    async fn set_power(&mut self, state: bool) -> DeviceUpdateResult {
         if self.dsn.is_empty() {
             self.is_on = state;
             return DeviceUpdateResult::new(None);
@@ -56,7 +56,7 @@ impl PowerSocket {
 
         let req = DeviceRequest::DeviceAction { method };
 
-        let result = make_device_tcp_request(self.dsn.as_str(), req);
+        let result = make_device_tcp_request(self.dsn.as_str(), req).await;
         let err = match result {
             Err(err) => Some(err),
             Ok(resp) => match resp {
@@ -74,9 +74,9 @@ impl PowerSocket {
         DeviceUpdateResult::new(err)
     }
 
-    pub fn get_power_consumption(&mut self) -> Result<f32, Box<dyn Error>> {
+    pub async fn get_power_consumption(&mut self) -> Result<f32, Box<dyn Error>> {
         if !self.dsn.is_empty() && device_needs_update(self.last_updated) {
-            let resp = make_device_tcp_request(&self.dsn, DeviceRequest::GetPower).unwrap();
+            let resp = make_device_tcp_request(&self.dsn, DeviceRequest::GetPower).await?;
             return match resp {
                 Response::Power(val) => {
                     self.power = val;
@@ -114,6 +114,7 @@ impl Device for PowerSocket {
 mod tests {
     use crate::devices::power_socket::{PowerSocket, DEVICE_NAME};
     use crate::devices::{Device, DeviceCondition, DeviceStatus};
+    use tokio;
 
     const NAME: &str = "test power socket";
 
@@ -121,26 +122,26 @@ mod tests {
         PowerSocket::new(NAME, "")
     }
 
-    #[test]
-    fn test_power_on() {
+    #[tokio::test]
+    async fn test_power_on() {
         let mut device = new_power_socket();
-        if let Some(err) = device.power_on().err {
+        if let Some(err) = device.power_on().await.err {
             panic!("{err}")
         }
     }
 
-    #[test]
-    fn test_power_off() {
+    #[tokio::test]
+    async fn test_power_off() {
         let mut device = new_power_socket();
-        if let Some(err) = device.power_off().err {
+        if let Some(err) = device.power_off().await.err {
             panic!("{err}")
         }
     }
 
-    #[test]
-    fn test_get_power_consumption() {
+    #[tokio::test]
+    async fn test_get_power_consumption() {
         let mut device = new_power_socket();
-        assert_eq!(device.get_power_consumption().unwrap(), 0.0)
+        assert_eq!(device.get_power_consumption().await.unwrap(), 0.0)
     }
 
     #[test]
