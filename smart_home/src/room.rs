@@ -80,10 +80,7 @@ impl Room {
 
         for device in self.devices.values() {
             let status = device.get_status();
-            match status {
-                Ok(s) => out.push_str(s.as_string().as_str()),
-                Err(err) => out.push_str(format!("error getting status: {}", err).as_str()),
-            }
+            out.push_str(status.as_string().as_str());
             out.push('\n')
         }
         out.push('\n');
@@ -97,7 +94,6 @@ mod tests {
     use crate::devices::power_socket::PowerSocket;
     use crate::devices::thermometer::Thermometer;
     use crate::room::Room;
-    use std::sync::{Arc, RwLock};
 
     static POWER_SOCKET: &str = "poser_socket";
     static THERMOMETER: &str = "thermometer";
@@ -107,12 +103,12 @@ mod tests {
         Room::new(TEST_ROOM)
     }
 
-    fn new_power_socket() -> Arc<RwLock<PowerSocket>> {
-        PowerSocket::new("test socket", "", "127.0.0.1:1234")
+    fn new_power_socket() -> PowerSocket {
+        PowerSocket::new("test socket", "127.0.0.1:1234")
     }
 
-    fn new_thermometer() -> Arc<RwLock<Thermometer>> {
-        Thermometer::new("test thermometer", "", "127.0.0.1:12345")
+    fn new_thermometer() -> Thermometer {
+        Thermometer::new("test thermometer", "127.0.0.1:12345")
     }
 
     #[test]

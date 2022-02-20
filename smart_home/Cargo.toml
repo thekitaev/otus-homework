@@ -6,6 +6,7 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+tokio = { version = "1.15", features = ["full"] }
 s_home_proto = { path = "../s_home_proto" }
 
 [dev-dependencies]
