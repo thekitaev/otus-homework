@@ -1,8 +1,7 @@
-use crate::quick_display_and_error;
 use s_home_proto::{DeviceRequest, Marshal, Response};
-use std::error::Error;
 use std::fmt::{write, Debug, Display, Formatter};
 use std::time::{Duration, Instant};
+use thiserror::Error;
 use tokio::io;
 use tokio::net::{TcpStream, UdpSocket};
 
@@ -139,15 +138,20 @@ pub(crate) async fn make_device_udp_request(dsn: &str, req: DeviceRequest) -> De
     Ok(resp)
 }
 
-#[derive(Debug)]
-pub struct DeviceUpdateResult {
-    pub err: Option<Box<dyn Error>>,
+#[derive(Error, Debug)]
+pub enum DeviceUpdateError {
+    #[error("unexpected response")]
+    UnexpectedResponse(s_home_proto::Response),
+    #[error("unknown error: {0}")]
+    UnknownError(Box<dyn std::error::Error>),
 }
 
-impl DeviceUpdateResult {
-    pub fn new(err: Option<Box<dyn Error>>) -> Self {
-        Self { err }
-    }
+#[derive(Error, Debug)]
+pub enum DeviceReadError {
+    #[error("unexpected response")]
+    UnexpectedResponse(s_home_proto::Response),
+    #[error("err making request: {0}")]
+    ErrMakingRequest(String),
+    #[error("unknown error: {0}")]
+    UnknownError(Box<dyn std::error::Error>),
 }
-
-quick_display_and_error!(DeviceUpdateResult);

@@ -8,6 +8,7 @@ edition = "2021"
 [dependencies]
 tokio = { version = "1.15", features = ["full"] }
 s_home_proto = { path = "../s_home_proto" }
+thiserror = "1.0.30"
 
 [dev-dependencies]
 power_socket_server = { path = "../power_socket_server"}

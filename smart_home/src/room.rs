@@ -1,22 +1,21 @@
+use thiserror::Error;
+
 use crate::devices::Device;
-use crate::quick_display_and_error;
 use std::collections::HashMap;
-use std::error::Error;
-use std::fmt::{Display, Formatter};
 
-#[derive(Debug)]
-pub struct RoomReadResult {
-    err: Option<Box<dyn Error>>,
+#[derive(Error, Debug)]
+pub enum RoomReadError {
+    #[error("device '{0}' does not exist")]
+    DeviceDoesNotExist(String),
 }
 
-quick_display_and_error!(RoomReadResult);
-
-#[derive(Debug)]
-pub struct RoomUpdateResult {
-    err: Option<Box<dyn Error>>,
+#[derive(Error, Debug)]
+pub enum RoomUpdateError {
+    #[error("device '{0}' does not exist")]
+    DeviceAlreadyExists(String),
+    #[error("room does not contain device '{0}'")]
+    DeviceDoesNotExist(String),
 }
-
-quick_display_and_error!(RoomUpdateResult);
 
 pub struct Room {
     pub(crate) name: String,
@@ -30,24 +29,26 @@ impl Room {
             devices: HashMap::new(),
         }
     }
-    pub fn add_device(&mut self, name: &str, device: Box<dyn Device>) -> RoomUpdateResult {
-        let err = if self.devices.contains_key(name) {
-            Some(format!("room already contains device '{}'", name).into())
+    pub fn add_device(
+        &mut self,
+        name: &str,
+        device: Box<dyn Device>,
+    ) -> Result<(), RoomUpdateError> {
+        if self.devices.contains_key(name) {
+            Err(RoomUpdateError::DeviceAlreadyExists(name.to_string()))
         } else {
             self.devices.insert(name.to_string(), device);
-            None
-        };
-        RoomUpdateResult { err }
+            Ok(())
+        }
     }
 
-    pub fn remove_device(&mut self, name: &str) -> RoomUpdateResult {
-        let err = if !self.devices.contains_key(name) {
-            Some(format!("room does not contain device '{}'", name).into())
+    pub fn remove_device(&mut self, name: &str) -> Result<(), RoomUpdateError> {
+        if !self.devices.contains_key(name) {
+            Err(RoomUpdateError::DeviceAlreadyExists(name.to_string()))
         } else {
             self.devices.remove(name);
-            None
-        };
-        RoomUpdateResult { err }
+            Ok(())
+        }
     }
 
     pub fn list_devices(&self) -> Vec<&dyn Device> {
@@ -60,13 +61,12 @@ impl Room {
         devices
     }
 
-    pub fn get_device(&self, name: &str) -> Result<&dyn Device, RoomReadResult> {
+    pub fn get_device(&self, name: &str) -> Result<&dyn Device, RoomReadError> {
         if self.devices.contains_key(name) {
             let device = self.devices.get(name).unwrap();
             Ok(device.as_ref())
         } else {
-            let err = Some(format!("device '{}' does not exist", name).into());
-            Err(RoomReadResult { err })
+            Err(RoomReadError::DeviceDoesNotExist(name.to_string()))
         }
     }
 
@@ -117,22 +117,22 @@ mod tests {
 
         // TODO: make a for loop with builder fn and error checking
         let add_power_socket_ok = room.add_device(POWER_SOCKET, Box::new(new_power_socket()));
-        if let Some(err) = add_power_socket_ok.err {
+        if let Err(err) = add_power_socket_ok {
             panic!("add_device failed: err {}", err)
         };
 
         let add_power_socket_err = room.add_device(POWER_SOCKET, Box::new(new_power_socket()));
-        if let None = add_power_socket_err.err {
+        if add_power_socket_err.is_ok() {
             panic!("add_device must have an err at this point")
         };
 
         let add_thermometer_ok = room.add_device(THERMOMETER, Box::new(new_thermometer()));
-        if let Some(err) = add_thermometer_ok.err {
+        if let Err(err) = add_thermometer_ok {
             panic!("add_device failed: err {}", err)
         };
 
         let add_thermometer_err = room.add_device(THERMOMETER, Box::new(new_thermometer()));
-        if let None = add_thermometer_err.err {
+        if add_thermometer_err.is_ok() {
             panic!("add_device must have an err at this point")
         };
     }
@@ -140,15 +140,15 @@ mod tests {
     #[test]
     fn test_remove_device() {
         let mut room = new_room();
-        room.add_device(THERMOMETER, Box::new(new_thermometer()));
+        room.add_device(THERMOMETER, Box::new(new_thermometer())).unwrap();
 
         let remove_device_ok = room.remove_device(THERMOMETER);
-        if let Some(err) = remove_device_ok.err {
+        if let Err(err) = remove_device_ok {
             panic!("remove_device failed: err {}", err)
         }
 
         let remove_device_err = room.remove_device(THERMOMETER);
-        if let None = remove_device_err.err {
+        if remove_device_err.is_ok() {
             panic!("remove_device must have an err at this point")
         };
     }
@@ -156,8 +156,8 @@ mod tests {
     #[test]
     fn test_list_devices() {
         let mut room = new_room();
-        room.add_device(THERMOMETER, Box::new(new_thermometer()));
-        room.add_device(POWER_SOCKET, Box::new(new_power_socket()));
+        room.add_device(THERMOMETER, Box::new(new_thermometer())).unwrap();
+        room.add_device(POWER_SOCKET, Box::new(new_power_socket())).unwrap();
 
         let devices_list = room.list_devices();
         assert_eq!(devices_list.len(), 2)
@@ -166,7 +166,7 @@ mod tests {
     #[test]
     fn test_get_device() {
         let mut room = new_room();
-        room.add_device(THERMOMETER, Box::new(new_thermometer()));
+        room.add_device(THERMOMETER, Box::new(new_thermometer())).unwrap();
 
         let get_device_ok = room.get_device(THERMOMETER);
         match get_device_ok {
@@ -186,7 +186,7 @@ mod tests {
         let mut room = new_room();
         assert_eq!(room.get_summary(), blank_summary);
 
-        room.add_device(THERMOMETER, Box::new(new_thermometer()));
+        room.add_device(THERMOMETER, Box::new(new_thermometer())).unwrap();
         assert_ne!(room.get_summary(), blank_summary);
     }
 }

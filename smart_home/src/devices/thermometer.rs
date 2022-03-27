@@ -2,8 +2,9 @@ use crate::devices::{
     device_needs_update, make_device_udp_request, Device, DeviceCondition, DeviceStatus,
 };
 use s_home_proto::{DeviceRequest, Response};
-use std::error::Error;
 use std::time::Instant;
+
+use super::DeviceReadError;
 
 static DEVICE_NAME: &str = "THRM";
 
@@ -30,9 +31,14 @@ impl Thermometer {
         }
     }
 
-    pub async fn get_temp(&mut self) -> Result<f32, Box<dyn Error>> {
+    pub async fn get_temp(&mut self) -> Result<f32, DeviceReadError> {
         if !self.dsn.is_empty() && device_needs_update(self.last_updated) {
-            let resp = make_device_udp_request(&self.dsn, DeviceRequest::GetTemperature).await?;
+            let request_result = make_device_udp_request(&self.dsn, DeviceRequest::GetTemperature).await;
+            let resp = if let Err(err) = request_result {
+                return Err(DeviceReadError::UnknownError(err));
+            } else {
+                request_result.unwrap()
+            };
             return match resp {
                 Response::Temperature(val) => {
                     self.temp = val;
@@ -42,11 +48,11 @@ impl Thermometer {
                 }
                 Response::Err(err_msg) => {
                     self.condition = DeviceCondition::Err(err_msg.to_string());
-                    Err(format!("err requesting temperature: {}", err_msg).into())
+                    Err(DeviceReadError::ErrMakingRequest(err_msg.to_string()))
                 }
                 _ => {
                     self.condition = DeviceCondition::Unknown;
-                    Err(format!("unexpected response: {:?}", resp).into())
+                    Err(DeviceReadError::UnexpectedResponse(resp))
                 }
             };
         }

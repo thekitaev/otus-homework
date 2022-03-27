@@ -1,8 +1,6 @@
-use crate::quick_display_and_error;
 use crate::room::Room;
 use std::collections::HashMap;
-use std::error::Error;
-use std::fmt::{Display, Formatter};
+use thiserror::Error;
 
 pub struct Home {
     name: String,
@@ -18,48 +16,46 @@ impl Home {
     }
 }
 
-#[derive(Debug)]
-pub struct HomeReadResult {
-    err: Option<Box<dyn Error>>,
+#[derive(Error, Debug)]
+pub enum HomeReadError {
+    #[error("home does not contain room '{0}'")]
+    DoesNotContainRoom(String),
 }
 
-quick_display_and_error!(HomeReadResult);
 
-#[derive(Debug)]
-pub struct HomeUpdateResult {
-    err: Option<Box<dyn Error>>,
+#[derive(Error, Debug)]
+pub enum HomeUpdateError {
+    #[error("home does not contain room '{0}'")]
+    DoesNotContainRoom(String),
+    #[error("home already contains room '{0}'")]
+    AlreadyContainsRoom(String),
 }
-quick_display_and_error!(HomeUpdateResult);
 
 impl Home {
-    pub fn add_room(&mut self, name: &str) -> HomeUpdateResult {
-        let err = if self.rooms.contains_key(name) {
-            Some(format!("home already contains room '{}'", name).into())
+    pub fn add_room(&mut self, name: &str) -> Result<(), HomeUpdateError> {
+        if self.rooms.contains_key(name) {
+            Err(HomeUpdateError::AlreadyContainsRoom(name.to_string()))
         } else {
             self.rooms.insert(name.to_string(), Room::new(name));
-            None
-        };
-        HomeUpdateResult { err }
-    }
-
-    pub fn get_room(&mut self, name: &str) -> Result<&Room, HomeReadResult> {
-        if self.rooms.contains_key(name) {
-            Ok(self.rooms.get(name).unwrap())
-        } else {
-            Err(HomeReadResult {
-                err: Some(format!("home does not contain room '{}'", name).into()),
-            })
+            Ok(())
         }
     }
 
-    pub fn remove_room(&mut self, name: &str) -> HomeUpdateResult {
-        let err = if !self.rooms.contains_key(name) {
-            Some(format!("home does not contain room '{}'", name).into())
+    pub fn get_room(&mut self, name: &str) -> Result<&Room, HomeReadError> {
+        if self.rooms.contains_key(name) {
+            Ok(self.rooms.get(name).unwrap())
+        } else {
+            Err(HomeReadError::DoesNotContainRoom(name.to_string()))
+        }
+    }
+
+    pub fn remove_room(&mut self, name: &str) -> Result<(), HomeUpdateError> {
+        if !self.rooms.contains_key(name) {
+            Err(HomeUpdateError::DoesNotContainRoom(name.to_string()))
         } else {
             self.rooms.remove(name);
-            None
-        };
-        HomeUpdateResult { err }
+            Ok(())
+        }
     }
 
     pub fn list_rooms(&self) -> Vec<&Room> {
@@ -97,12 +93,12 @@ mod tests {
         let mut home = new_home();
 
         let add_room_ok = home.add_room(KITCHEN);
-        if let Some(err) = add_room_ok.err {
+        if let Err(err) = add_room_ok {
             panic!("err {} should not be present", err)
         }
 
         let add_room_err = home.add_room(KITCHEN);
-        if let None = add_room_err.err {
+        if add_room_err.is_ok() {
             panic!("err should be present now, but it does not")
         }
     }
@@ -110,7 +106,7 @@ mod tests {
     #[test]
     fn test_get_room() {
         let mut home = new_home();
-        home.add_room(KITCHEN);
+        home.add_room(KITCHEN).unwrap();
 
         let get_kitchen_ok = home.get_room(KITCHEN);
         match get_kitchen_ok {
@@ -126,10 +122,10 @@ mod tests {
     #[test]
     fn test_remove_room() {
         let mut home = new_home();
-        home.add_room(KITCHEN);
+        home.add_room(KITCHEN).unwrap();
 
         let remove_kitchen_ok = home.remove_room(KITCHEN);
-        if let Some(err) = remove_kitchen_ok.err {
+        if let Err(err) = remove_kitchen_ok {
             panic!("remove_room failed: err {}", err)
         }
     }
@@ -139,7 +135,7 @@ mod tests {
         let mut home = new_home();
         let rooms_names = vec!["room_1", "room_2"];
         for room in rooms_names {
-            home.add_room(room);
+            home.add_room(room).unwrap();
         }
 
         let rooms = home.list_rooms();
@@ -158,7 +154,7 @@ mod tests {
         let summary = home.collect_summary();
         assert_eq!(summary, blank_summary);
 
-        home.add_room(KITCHEN);
+        home.add_room(KITCHEN).unwrap();
         let summary = home.collect_summary();
         assert_eq!(summary, summary_with_kitchen)
     }

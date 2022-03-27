@@ -1,10 +1,11 @@
 use crate::devices::{
     device_needs_update, make_device_tcp_request, Device, DeviceCondition, DeviceStatus,
-    DeviceUpdateResult,
+    DeviceUpdateError,
 };
 use s_home_proto::{DeviceAction, DeviceRequest, Response};
-use std::error::Error;
 use std::time::Instant;
+
+use super::DeviceReadError;
 
 static DEVICE_NAME: &str = "PSOC";
 
@@ -34,18 +35,18 @@ impl PowerSocket {
         }
     }
 
-    pub async fn power_on(&mut self) -> DeviceUpdateResult {
+    pub async fn power_on(&mut self) -> Result<(), DeviceUpdateError> {
         self.set_power(true).await
     }
 
-    pub async fn power_off(&mut self) -> DeviceUpdateResult {
+    pub async fn power_off(&mut self) -> Result<(), DeviceUpdateError> {
         self.set_power(false).await
     }
 
-    async fn set_power(&mut self, state: bool) -> DeviceUpdateResult {
+    async fn set_power(&mut self, state: bool) -> Result<(), DeviceUpdateError> {
         if self.dsn.is_empty() {
             self.is_on = state;
-            return DeviceUpdateResult::new(None);
+            return Ok(());
         }
 
         let method = if state {
@@ -57,26 +58,29 @@ impl PowerSocket {
         let req = DeviceRequest::DeviceAction { method };
 
         let result = make_device_tcp_request(self.dsn.as_str(), req).await;
-        let err = match result {
-            Err(err) => Some(err),
+        match result {
+            Err(err) => Err(DeviceUpdateError::UnknownError(err)),
             Ok(resp) => match resp {
                 Response::Ok => {
                     self.is_on = state;
-                    None
+                    Ok(())
                 }
                 _ => {
-                    let msg = format!("unexpected response: {:?}", resp);
-                    eprintln!("{}", msg);
-                    Some(msg.into())
+                    eprintln!("unexpected response: {:?}", resp);
+                    Err(DeviceUpdateError::UnexpectedResponse(resp))
                 }
             },
-        };
-        DeviceUpdateResult::new(err)
+        }
     }
 
-    pub async fn get_power_consumption(&mut self) -> Result<f32, Box<dyn Error>> {
+    pub async fn get_power_consumption(&mut self) -> Result<f32, DeviceReadError> {
         if !self.dsn.is_empty() && device_needs_update(self.last_updated) {
-            let resp = make_device_tcp_request(&self.dsn, DeviceRequest::GetPower).await?;
+            let request_result  = make_device_tcp_request(&self.dsn, DeviceRequest::GetPower).await;
+            let resp = if let Err(err) = request_result {
+                return Err(DeviceReadError::UnknownError(err));
+            } else {
+                request_result.unwrap()
+            };
             return match resp {
                 Response::Power(val) => {
                     self.power = val;
@@ -86,11 +90,11 @@ impl PowerSocket {
                 }
                 Response::Err(err_msg) => {
                     self.condition = DeviceCondition::Err(err_msg.to_string());
-                    Err(format!("err requesting power: {}", err_msg).into())
+                    Err(DeviceReadError::ErrMakingRequest(err_msg.to_string()))
                 }
                 _ => {
                     self.condition = DeviceCondition::Unknown;
-                    Err(format!("unexpected response: {:?}", resp).into())
+                    Err(DeviceReadError::UnexpectedResponse(resp))
                 }
             };
         }
@@ -125,7 +129,7 @@ mod tests {
     #[tokio::test]
     async fn test_power_on() {
         let mut device = new_power_socket();
-        if let Some(err) = device.power_on().await.err {
+        if let Err(err) = device.power_on().await {
             panic!("{err}")
         }
     }
@@ -133,7 +137,7 @@ mod tests {
     #[tokio::test]
     async fn test_power_off() {
         let mut device = new_power_socket();
-        if let Some(err) = device.power_off().await.err {
+        if let Err(err) = device.power_off().await {
             panic!("{err}")
         }
     }

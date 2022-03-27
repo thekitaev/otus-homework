@@ -13,7 +13,7 @@ async fn test_power_socket_with_mock_server() {
     tokio::time::sleep(Duration::from_secs(1)).await;
 
     let power_on_result = device.power_on().await;
-    if let Some(err) = power_on_result.err {
+    if let Err(err) = power_on_result {
         panic!("err powering on: {}", err)
     } else {
         println!("powering on OK")
